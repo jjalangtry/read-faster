@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 63;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -62,7 +62,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		144C10CD16BD53303441C64F /* ReadFaster-macOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "ReadFaster-macOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		144C10CD16BD53303441C64F /* Read Faster.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Read Faster.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		2E192411840FB34683086C67 /* RSVPEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSVPEngine.swift; sourceTree = "<group>"; };
 		304C81B6697655A5B455D9EA /* ReadingProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingProgress.swift; sourceTree = "<group>"; };
 		3143C7081F60ACE51AB214EA /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -81,7 +81,7 @@
 		8296314E7C44A4E3FD358166 /* ImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportView.swift; sourceTree = "<group>"; };
 		87F51B5375F72A2B690A02F1 /* ReadFaster.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ReadFaster.entitlements; sourceTree = "<group>"; };
 		92607DD353C1966E4122DE2B /* DocumentParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentParser.swift; sourceTree = "<group>"; };
-		B07142487F187B38A89FB7F7 /* ReadFaster-iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "ReadFaster-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		B07142487F187B38A89FB7F7 /* Read Faster.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Read Faster.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		B71D576E9AA208C562C92681 /* BookmarksSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarksSheet.swift; sourceTree = "<group>"; };
 		C29702C5A598CAC90D17C43C /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		CD7066860B04066AD4C4D9A2 /* OCRParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OCRParser.swift; sourceTree = "<group>"; };
@@ -202,8 +202,8 @@
 		A03A9F3D944F7BEA4BF4A745 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				B07142487F187B38A89FB7F7 /* ReadFaster-iOS.app */,
-				144C10CD16BD53303441C64F /* ReadFaster-macOS.app */,
+				B07142487F187B38A89FB7F7 /* Read Faster.app */,
+				144C10CD16BD53303441C64F /* Read Faster.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -273,7 +273,7 @@
 				15E441C3EB5DE11D02612665 /* SwiftSoup */,
 			);
 			productName = "ReadFaster-macOS";
-			productReference = 144C10CD16BD53303441C64F /* ReadFaster-macOS.app */;
+			productReference = 144C10CD16BD53303441C64F /* Read Faster.app */;
 			productType = "com.apple.product-type.application";
 		};
 		DC691BB97538251F2FFC56B6 /* ReadFaster-iOS */ = {
@@ -294,7 +294,7 @@
 				4759AC1D5F68C3C41973BFF0 /* SwiftSoup */,
 			);
 			productName = "ReadFaster-iOS";
-			productReference = B07142487F187B38A89FB7F7 /* ReadFaster-iOS.app */;
+			productReference = B07142487F187B38A89FB7F7 /* Read Faster.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -328,7 +328,6 @@
 				A72D931A6768FFD5EFDD5758 /* XCRemoteSwiftPackageReference "SwiftSoup" */,
 				38F5FA900546326F1B79E4D5 /* XCRemoteSwiftPackageReference "ZIPFoundation" */,
 			);
-			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -551,13 +550,14 @@
 				CODE_SIGN_ENTITLEMENTS = ReadFaster/Resources/ReadFaster.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 5JZV7V6Y4Z;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ReadFaster/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.readfaster.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jakoblangtry.readfaster;
 				PRODUCT_NAME = "Read Faster";
 				SDKROOT = iphoneos;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
@@ -573,6 +573,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReadFaster/Resources/ReadFaster.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = 5JZV7V6Y4Z;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ReadFaster/Resources/Info.plist;
@@ -580,7 +581,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.readfaster.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jakoblangtry.readfaster;
 				PRODUCT_NAME = "Read Faster";
 				SDKROOT = macosx;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
@@ -594,6 +595,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReadFaster/Resources/ReadFaster.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = 5JZV7V6Y4Z;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ReadFaster/Resources/Info.plist;
@@ -601,7 +603,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.readfaster.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jakoblangtry.readfaster;
 				PRODUCT_NAME = "Read Faster";
 				SDKROOT = macosx;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -615,13 +617,14 @@
 				CODE_SIGN_ENTITLEMENTS = ReadFaster/Resources/ReadFaster.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 5JZV7V6Y4Z;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ReadFaster/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.readfaster.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jakoblangtry.readfaster;
 				PRODUCT_NAME = "Read Faster";
 				SDKROOT = iphoneos;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;

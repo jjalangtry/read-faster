@@ -66,7 +66,7 @@ struct ImportView: View {
             VStack(spacing: 20) {
                 Image(systemName: "doc.badge.plus")
                     .font(.system(size: 56))
-                    .foregroundStyle(isDragOver ? .accent : .secondary)
+                    .foregroundStyle(isDragOver ? Color.accentColor : .secondary)
                     .symbolEffect(.bounce, value: isDragOver)
 
                 VStack(spacing: 8) {
@@ -189,7 +189,7 @@ struct FormatBadge: View {
         VStack(spacing: 6) {
             Image(systemName: icon)
                 .font(.title2)
-                .foregroundStyle(.accent)
+                .foregroundStyle(Color.accentColor)
 
             Text(label)
                 .font(.caption)

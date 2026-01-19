@@ -65,7 +65,7 @@ struct BookmarkRow: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Image(systemName: "bookmark.fill")
-                    .foregroundStyle(.accentColor)
+                    .foregroundStyle(Color.accentColor)
 
                 Text("Word \(bookmark.wordIndex + 1)")
                     .font(.headline)

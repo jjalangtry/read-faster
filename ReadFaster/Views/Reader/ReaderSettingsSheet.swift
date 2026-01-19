@@ -10,57 +10,9 @@ struct ReaderSettingsSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Display") {
-                    VStack(alignment: .leading) {
-                        Text("Font Size: \(Int(fontSize))")
-                        Slider(value: $fontSize, in: 24...72, step: 2)
-                    }
-
-                    // Preview
-                    HStack {
-                        Spacer()
-                        Text("Sample")
-                            .font(.system(size: fontSize, weight: .medium, design: .monospaced))
-                        Spacer()
-                    }
-                    .padding(.vertical, 8)
-                }
-
-                Section("Timing") {
-                    Toggle("Pause on Punctuation", isOn: $pauseOnPunctuation)
-
-                    Text("When enabled, the reader pauses longer at sentence endings and clause breaks for better comprehension.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                Section("Speed Presets") {
-                    ForEach(SpeedPreset.allCases, id: \.self) { preset in
-                        Button {
-                            engine.wordsPerMinute = preset.wpm
-                        } label: {
-                            HStack {
-                                VStack(alignment: .leading) {
-                                    Text(preset.name)
-                                    Text(preset.description)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-
-                                Spacer()
-
-                                Text("\(preset.wpm) WPM")
-                                    .foregroundStyle(.secondary)
-
-                                if engine.wordsPerMinute == preset.wpm {
-                                    Image(systemName: "checkmark")
-                                        .foregroundStyle(.accentColor)
-                                }
-                            }
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
+                displaySection
+                timingSection
+                speedPresetsSection
             }
             .navigationTitle("Reader Settings")
             #if os(iOS)
@@ -83,6 +35,73 @@ struct ReaderSettingsSheet: View {
         #if os(macOS)
         .frame(minWidth: 400, minHeight: 400)
         #endif
+    }
+
+    private var displaySection: some View {
+        Section("Display") {
+            VStack(alignment: .leading) {
+                Text("Font Size: \(Int(fontSize))")
+                Slider(value: $fontSize, in: 24...72, step: 2)
+            }
+
+            HStack {
+                Spacer()
+                Text("Sample")
+                    .font(.system(size: fontSize, weight: .medium, design: .monospaced))
+                Spacer()
+            }
+            .padding(.vertical, 8)
+        }
+    }
+
+    private var timingSection: some View {
+        Section("Timing") {
+            Toggle("Pause on Punctuation", isOn: $pauseOnPunctuation)
+
+            Text("When enabled, the reader pauses longer at sentence endings and clause breaks for better comprehension.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var speedPresetsSection: some View {
+        Section("Speed Presets") {
+            ForEach(SpeedPreset.allCases, id: \.self) { preset in
+                SpeedPresetRow(preset: preset, currentWPM: engine.wordsPerMinute) {
+                    engine.wordsPerMinute = preset.wpm
+                }
+            }
+        }
+    }
+}
+
+struct SpeedPresetRow: View {
+    let preset: SpeedPreset
+    let currentWPM: Int
+    let onSelect: () -> Void
+
+    var body: some View {
+        Button(action: onSelect) {
+            HStack {
+                VStack(alignment: .leading) {
+                    Text(preset.name)
+                    Text(preset.description)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Text("\(preset.wpm) WPM")
+                    .foregroundStyle(.secondary)
+
+                if currentWPM == preset.wpm {
+                    Image(systemName: "checkmark")
+                        .foregroundStyle(Color.accentColor)
+                }
+            }
+        }
+        .buttonStyle(.plain)
     }
 }
 

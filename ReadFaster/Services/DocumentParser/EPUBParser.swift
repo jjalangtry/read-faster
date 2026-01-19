@@ -10,8 +10,11 @@ struct EPUBParser: DocumentParser {
             throw DocumentParserError.fileNotFound
         }
 
-        guard let archive = Archive(url: url, accessMode: .read) else {
-            throw DocumentParserError.parsingFailed("Could not open EPUB archive.")
+        let archive: Archive
+        do {
+            archive = try Archive(url: url, accessMode: .read)
+        } catch {
+            throw DocumentParserError.parsingFailed("Could not open EPUB archive: \(error.localizedDescription)")
         }
 
         // 1. Find the root file path from container.xml
