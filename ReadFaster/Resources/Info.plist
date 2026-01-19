@@ -78,6 +78,16 @@
             </array>
         </dict>
     </array>
+    <key>UIAppFonts</key>
+    <array>
+        <string>MonaspaceXenon-Regular.otf</string>
+        <string>MonaspaceXenon-Medium.otf</string>
+        <string>MonaspaceXenon-SemiBold.otf</string>
+        <string>MonaspaceXenon-Bold.otf</string>
+        <string>MonaspaceXenon-Light.otf</string>
+    </array>
+    <key>ATSApplicationFontsPath</key>
+    <string>Fonts</string>
     <key>UTImportedTypeDeclarations</key>
     <array>
         <dict>

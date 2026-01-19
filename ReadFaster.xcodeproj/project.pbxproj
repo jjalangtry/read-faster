@@ -13,6 +13,8 @@
 		0E07BAD004759BC2994514B2 /* ReadFasterApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E35D39D85A2DCF35826FDF6 /* ReadFasterApp.swift */; };
 		0E167220483A3D72510022ED /* PDFParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C133DA5C71690512C4105A1 /* PDFParser.swift */; };
 		0E16EB54AB207521CD5FA9DE /* TextProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81AF3FE7372C88D0F91841B9 /* TextProcessor.swift */; };
+		10A44CF302DEB089CC305291 /* MonaspaceXenon-Light.otf in Resources */ = {isa = PBXBuildFile; fileRef = 73E71D7A5FBCBAC41C2F2BB6 /* MonaspaceXenon-Light.otf */; };
+		11300B1896EC42372EE2BA70 /* MonaspaceXenon-Medium.otf in Resources */ = {isa = PBXBuildFile; fileRef = C65845ADA9C0C23805CBC452 /* MonaspaceXenon-Medium.otf */; };
 		11DC0CF820EC2678EB6AC689 /* ReadingProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 304C81B6697655A5B455D9EA /* ReadingProgress.swift */; };
 		1560D7E1F70EEB93E0D28F82 /* RSVPView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40C8E94596763B83C0749AF7 /* RSVPView.swift */; };
 		193221C360A362609135AEFA /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3143C7081F60ACE51AB214EA /* SettingsView.swift */; };
@@ -23,11 +25,14 @@
 		2C78B03ACFDBE207B5A35BBF /* ImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8296314E7C44A4E3FD358166 /* ImportView.swift */; };
 		316E8D73CF803E35B074C708 /* SentenceContextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 987611D53FA631631B8E54E9 /* SentenceContextView.swift */; };
 		326D656ACA456C46452A8712 /* ReadingMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 753B7C49E89D018014C42C0A /* ReadingMode.swift */; };
+		3379F8E5BAFC8B7170530FFE /* MonaspaceXenon-Light.otf in Resources */ = {isa = PBXBuildFile; fileRef = 73E71D7A5FBCBAC41C2F2BB6 /* MonaspaceXenon-Light.otf */; };
 		3440649A57459DFA2FF0544A /* ControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 461E011FFC991CFF6CFE5ADC /* ControlsView.swift */; };
 		37CE2F1736A366F11A707E77 /* ORPCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F267054CC84B3FF28F4B3CD3 /* ORPCalculator.swift */; };
 		39C9B5E19A3161CF42F4CDD3 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DA5169842C8F3AC468AE285 /* LibraryView.swift */; };
 		3C5C1FD9DF721DA578C10900 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 8413069FC3996F115D70A272 /* ZIPFoundation */; };
+		40E2815B9AF6027E09FF68B0 /* MonaspaceXenon-Regular.otf in Resources */ = {isa = PBXBuildFile; fileRef = A246AD6DC2F1045742A891B6 /* MonaspaceXenon-Regular.otf */; };
 		4185C10AA2D1BC0CE876F7AB /* ReadingMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 753B7C49E89D018014C42C0A /* ReadingMode.swift */; };
+		49B214BB50F06769DB9F0D98 /* MonaspaceXenon-Regular.otf in Resources */ = {isa = PBXBuildFile; fileRef = A246AD6DC2F1045742A891B6 /* MonaspaceXenon-Regular.otf */; };
 		4A5131812C5FA1EFAA23FAD3 /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = 4759AC1D5F68C3C41973BFF0 /* SwiftSoup */; };
 		5123B1191740676315670455 /* Chapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = E12F6EABBD79EC08E90D63AC /* Chapter.swift */; };
 		58B1A50AC711B744E574A4FE /* HoldableButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81589A9AF68207A641289DD6 /* HoldableButton.swift */; };
@@ -37,6 +42,7 @@
 		6D88D4409E6E7EA71288FF3F /* ChaptersSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2BC97AC289F4141AEBFC63D /* ChaptersSheet.swift */; };
 		7ACA7019091F92F6DBD22744 /* TextProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81AF3FE7372C88D0F91841B9 /* TextProcessor.swift */; };
 		7B5D6D8BF633E5B572BFB670 /* GlassEffectContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A2D977C89F006BEA9060E4E /* GlassEffectContainer.swift */; };
+		7C13E1500F78CCE79D0380C9 /* MonaspaceXenon-SemiBold.otf in Resources */ = {isa = PBXBuildFile; fileRef = 6920D527FD28C4E3955571F7 /* MonaspaceXenon-SemiBold.otf */; };
 		845F5E3186B5B2DB481EEEDE /* TextParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 456EEC013D231DBADD65A9B8 /* TextParser.swift */; };
 		86958DFE3E20C3B2F2203859 /* OCRParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD7066860B04066AD4C4D9A2 /* OCRParser.swift */; };
 		86B8ACAD072B2895382C40FF /* BookmarksSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B71D576E9AA208C562C92681 /* BookmarksSheet.swift */; };
@@ -45,15 +51,18 @@
 		8EB81FB55C9DEA7C87036F55 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C29702C5A598CAC90D17C43C /* ContentView.swift */; };
 		91B72806FB74930BBB4A8AE5 /* SentenceContextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 987611D53FA631631B8E54E9 /* SentenceContextView.swift */; };
 		962D80B38DD625A8DCA9216D /* ControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 461E011FFC991CFF6CFE5ADC /* ControlsView.swift */; };
+		98893B3AEE7AB4DE8CE89E04 /* MonaspaceXenon-Bold.otf in Resources */ = {isa = PBXBuildFile; fileRef = 8B8F6C2305250961990EDA14 /* MonaspaceXenon-Bold.otf */; };
 		99380D4922E32DB12F41CBD2 /* RSVPEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E192411840FB34683086C67 /* RSVPEngine.swift */; };
 		9FF433942C4695CD3A2D8169 /* EPUBParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = E75D07923EC8BA7D69707F10 /* EPUBParser.swift */; };
 		A2240546A94280E55D877B53 /* RSVPEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E192411840FB34683086C67 /* RSVPEngine.swift */; };
 		A5925AE720E2935F12765E63 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C29702C5A598CAC90D17C43C /* ContentView.swift */; };
+		A7CBFFF23463AFE01D59A09E /* MonaspaceXenon-Bold.otf in Resources */ = {isa = PBXBuildFile; fileRef = 8B8F6C2305250961990EDA14 /* MonaspaceXenon-Bold.otf */; };
 		AC885CF7F98D4BBB9DB8D530 /* WordDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E5426EB2F7B1FA8A2A38F25 /* WordDisplay.swift */; };
 		AE0227C040E9AFFE132AA4A7 /* WordDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E5426EB2F7B1FA8A2A38F25 /* WordDisplay.swift */; };
 		AEC7A1DE87654B3839E67D61 /* PDFParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C133DA5C71690512C4105A1 /* PDFParser.swift */; };
 		B65A5B0313E23542B0F767CB /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 5F519F8138B5A1DF093AD00A /* ZIPFoundation */; };
 		BE22E7B9DBF09168BCFEDB85 /* DocumentParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92607DD353C1966E4122DE2B /* DocumentParser.swift */; };
+		C6B800255D9C600EFC6A57D3 /* AppFont.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5156DC1E6C8B320DA376026 /* AppFont.swift */; };
 		CA2DB574507040BAA7917E7A /* Bookmark.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D2B054DDD8276C5847450DF /* Bookmark.swift */; };
 		CD1B170BD8327D71951BB7BD /* Chapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = E12F6EABBD79EC08E90D63AC /* Chapter.swift */; };
 		CDE6598198694B596EC2328D /* TextParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 456EEC013D231DBADD65A9B8 /* TextParser.swift */; };
@@ -65,9 +74,12 @@
 		E6310C7928875B0F0971A4E6 /* HoldableButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81589A9AF68207A641289DD6 /* HoldableButton.swift */; };
 		EAB7D03F2BED1E64B877B8CF /* ImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8296314E7C44A4E3FD358166 /* ImportView.swift */; };
 		EAD98E7C8E9A3068A8EA2D95 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 360BA255B15896C478414A12 /* Assets.xcassets */; };
+		EB0AC1701C6C680C6F2F85D9 /* MonaspaceXenon-Medium.otf in Resources */ = {isa = PBXBuildFile; fileRef = C65845ADA9C0C23805CBC452 /* MonaspaceXenon-Medium.otf */; };
 		ED68D8C921FE9FE927DAEDB8 /* Bookmark.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D2B054DDD8276C5847450DF /* Bookmark.swift */; };
+		F0A989FB1946C0DF22E443A8 /* MonaspaceXenon-SemiBold.otf in Resources */ = {isa = PBXBuildFile; fileRef = 6920D527FD28C4E3955571F7 /* MonaspaceXenon-SemiBold.otf */; };
 		F4B0DD6606862978E8237446 /* OCRParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD7066860B04066AD4C4D9A2 /* OCRParser.swift */; };
 		F569F3E9A03E6F4FB0A0BDD1 /* BookmarksSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B71D576E9AA208C562C92681 /* BookmarksSheet.swift */; };
+		F91F462484B546B34A522C2B /* AppFont.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5156DC1E6C8B320DA376026 /* AppFont.swift */; };
 		FB600A857EC407A114600299 /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = 15E441C3EB5DE11D02612665 /* SwiftSoup */; };
 		FDA73AE81950F1244211D851 /* ORPCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F267054CC84B3FF28F4B3CD3 /* ORPCalculator.swift */; };
 		FDD8BD172904950197B7AB3E /* GlassEffectContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A2D977C89F006BEA9060E4E /* GlassEffectContainer.swift */; };
@@ -85,8 +97,10 @@
 		4D2B054DDD8276C5847450DF /* Bookmark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Bookmark.swift; sourceTree = "<group>"; };
 		4E35D39D85A2DCF35826FDF6 /* ReadFasterApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadFasterApp.swift; sourceTree = "<group>"; };
 		5C133DA5C71690512C4105A1 /* PDFParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFParser.swift; sourceTree = "<group>"; };
+		6920D527FD28C4E3955571F7 /* MonaspaceXenon-SemiBold.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "MonaspaceXenon-SemiBold.otf"; sourceTree = "<group>"; };
 		6E5426EB2F7B1FA8A2A38F25 /* WordDisplay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordDisplay.swift; sourceTree = "<group>"; };
 		720A95ADF4F209173ECB1DD2 /* Book.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Book.swift; sourceTree = "<group>"; };
+		73E71D7A5FBCBAC41C2F2BB6 /* MonaspaceXenon-Light.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "MonaspaceXenon-Light.otf"; sourceTree = "<group>"; };
 		753B7C49E89D018014C42C0A /* ReadingMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingMode.swift; sourceTree = "<group>"; };
 		782BDE2B0986B661D50AB4AD /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		7DA5169842C8F3AC468AE285 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
@@ -95,16 +109,20 @@
 		8296314E7C44A4E3FD358166 /* ImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportView.swift; sourceTree = "<group>"; };
 		87F51B5375F72A2B690A02F1 /* ReadFaster.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ReadFaster.entitlements; sourceTree = "<group>"; };
 		8A2D977C89F006BEA9060E4E /* GlassEffectContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassEffectContainer.swift; sourceTree = "<group>"; };
+		8B8F6C2305250961990EDA14 /* MonaspaceXenon-Bold.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "MonaspaceXenon-Bold.otf"; sourceTree = "<group>"; };
 		92607DD353C1966E4122DE2B /* DocumentParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentParser.swift; sourceTree = "<group>"; };
 		987611D53FA631631B8E54E9 /* SentenceContextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SentenceContextView.swift; sourceTree = "<group>"; };
+		A246AD6DC2F1045742A891B6 /* MonaspaceXenon-Regular.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "MonaspaceXenon-Regular.otf"; sourceTree = "<group>"; };
 		B07142487F187B38A89FB7F7 /* ReadFaster-iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "ReadFaster-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		B2BC97AC289F4141AEBFC63D /* ChaptersSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChaptersSheet.swift; sourceTree = "<group>"; };
 		B71D576E9AA208C562C92681 /* BookmarksSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarksSheet.swift; sourceTree = "<group>"; };
 		C29702C5A598CAC90D17C43C /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		C65845ADA9C0C23805CBC452 /* MonaspaceXenon-Medium.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "MonaspaceXenon-Medium.otf"; sourceTree = "<group>"; };
 		CD7066860B04066AD4C4D9A2 /* OCRParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OCRParser.swift; sourceTree = "<group>"; };
 		CFBE9528847F85B3B70DA2A3 /* StorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageService.swift; sourceTree = "<group>"; };
 		D62807344E4E19BA4B449EA2 /* BookCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookCard.swift; sourceTree = "<group>"; };
 		E12F6EABBD79EC08E90D63AC /* Chapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Chapter.swift; sourceTree = "<group>"; };
+		E5156DC1E6C8B320DA376026 /* AppFont.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFont.swift; sourceTree = "<group>"; };
 		E577272EE6657FA0AB1EC05B /* ReaderSettingsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderSettingsSheet.swift; sourceTree = "<group>"; };
 		E75D07923EC8BA7D69707F10 /* EPUBParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EPUBParser.swift; sourceTree = "<group>"; };
 		F267054CC84B3FF28F4B3CD3 /* ORPCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ORPCalculator.swift; sourceTree = "<group>"; };
@@ -194,6 +212,7 @@
 				360BA255B15896C478414A12 /* Assets.xcassets */,
 				782BDE2B0986B661D50AB4AD /* Info.plist */,
 				87F51B5375F72A2B690A02F1 /* ReadFaster.entitlements */,
+				9368250C2E505C09B87E01A0 /* Fonts */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -201,6 +220,7 @@
 		7879814877FAD28B15F685A2 /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
+				E5156DC1E6C8B320DA376026 /* AppFont.swift */,
 				F267054CC84B3FF28F4B3CD3 /* ORPCalculator.swift */,
 				81AF3FE7372C88D0F91841B9 /* TextProcessor.swift */,
 			);
@@ -219,6 +239,18 @@
 				6E5426EB2F7B1FA8A2A38F25 /* WordDisplay.swift */,
 			);
 			path = Reader;
+			sourceTree = "<group>";
+		};
+		9368250C2E505C09B87E01A0 /* Fonts */ = {
+			isa = PBXGroup;
+			children = (
+				8B8F6C2305250961990EDA14 /* MonaspaceXenon-Bold.otf */,
+				73E71D7A5FBCBAC41C2F2BB6 /* MonaspaceXenon-Light.otf */,
+				C65845ADA9C0C23805CBC452 /* MonaspaceXenon-Medium.otf */,
+				A246AD6DC2F1045742A891B6 /* MonaspaceXenon-Regular.otf */,
+				6920D527FD28C4E3955571F7 /* MonaspaceXenon-SemiBold.otf */,
+			);
+			path = Fonts;
 			sourceTree = "<group>";
 		};
 		A03A9F3D944F7BEA4BF4A745 /* Products */ = {
@@ -376,6 +408,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				6C960E0AC47685E6D6BAB9F5 /* Assets.xcassets in Resources */,
+				98893B3AEE7AB4DE8CE89E04 /* MonaspaceXenon-Bold.otf in Resources */,
+				10A44CF302DEB089CC305291 /* MonaspaceXenon-Light.otf in Resources */,
+				EB0AC1701C6C680C6F2F85D9 /* MonaspaceXenon-Medium.otf in Resources */,
+				40E2815B9AF6027E09FF68B0 /* MonaspaceXenon-Regular.otf in Resources */,
+				F0A989FB1946C0DF22E443A8 /* MonaspaceXenon-SemiBold.otf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -384,6 +421,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				EAD98E7C8E9A3068A8EA2D95 /* Assets.xcassets in Resources */,
+				A7CBFFF23463AFE01D59A09E /* MonaspaceXenon-Bold.otf in Resources */,
+				3379F8E5BAFC8B7170530FFE /* MonaspaceXenon-Light.otf in Resources */,
+				11300B1896EC42372EE2BA70 /* MonaspaceXenon-Medium.otf in Resources */,
+				49B214BB50F06769DB9F0D98 /* MonaspaceXenon-Regular.otf in Resources */,
+				7C13E1500F78CCE79D0380C9 /* MonaspaceXenon-SemiBold.otf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -394,6 +436,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F91F462484B546B34A522C2B /* AppFont.swift in Sources */,
 				D6CE738244DFA3CCAF173D56 /* Book.swift in Sources */,
 				0084311E2E8E0CB9A9CA4DBD /* BookCard.swift in Sources */,
 				CA2DB574507040BAA7917E7A /* Bookmark.swift in Sources */,
@@ -430,6 +473,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C6B800255D9C600EFC6A57D3 /* AppFont.swift in Sources */,
 				1DBB637429D590E016D66602 /* Book.swift in Sources */,
 				CFCD1657EA87C63A4F487E01 /* BookCard.swift in Sources */,
 				ED68D8C921FE9FE927DAEDB8 /* Bookmark.swift in Sources */,
@@ -519,7 +563,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.5.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -578,7 +622,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.5.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";

@@ -18,7 +18,7 @@ packages:
 
 settings:
   base:
-    MARKETING_VERSION: "0.1.0"
+    MARKETING_VERSION: "0.5.0"
     CURRENT_PROJECT_VERSION: "1"
     SWIFT_VERSION: "5.9"
 
@@ -27,6 +27,9 @@ targetTemplates:
     type: application
     sources:
       - ReadFaster
+    resources:
+      - path: ReadFaster/Resources/Fonts
+        buildPhase: resources
     dependencies:
       - package: ZIPFoundation
       - package: SwiftSoup

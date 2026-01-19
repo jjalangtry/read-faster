@@ -22,11 +22,10 @@ struct WordDisplay: View {
                     .foregroundStyle(.primary)
                     .frame(minWidth: 0, maxWidth: .infinity, alignment: .trailing)
 
-                // Focal character (red) - this is the key visual anchor
+                // Focal character (red) - visual anchor point
                 if let focal = orpWord.focal {
                     Text(String(focal))
                         .foregroundStyle(.red)
-                        .fontWeight(.bold)
                 }
 
                 // After ORP (left-aligned from focal point)
@@ -34,7 +33,7 @@ struct WordDisplay: View {
                     .foregroundStyle(.primary)
                     .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
             }
-            .font(.system(size: fontSize, weight: .medium, design: .monospaced))
+            .font(AppFont.rsvpWord(size: fontSize))
             .lineLimit(1)
             .minimumScaleFactor(0.5)
 

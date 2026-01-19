@@ -51,6 +51,7 @@ struct ReadFasterApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .appFont()
         }
         .modelContainer(modelContainer)
         #if os(macOS)

@@ -12,12 +12,12 @@ struct BookCard: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(book.title)
-                    .font(.headline)
+                    .font(AppFont.headline)
                     .lineLimit(2)
 
                 if let author = book.author {
                     Text(author)
-                        .font(.subheadline)
+                        .font(AppFont.subheadline)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
@@ -50,7 +50,7 @@ struct BookCard: View {
                     .foregroundStyle(.secondary)
 
                 Text(book.title)
-                    .font(.caption)
+                    .font(AppFont.caption)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 8)
                     .foregroundStyle(.secondary)
@@ -75,7 +75,7 @@ struct BookCard: View {
                 .tint(percent >= 100 ? .green : .accentColor)
 
             Text("\(Int(percent))%")
-                .font(.caption2)
+                .font(AppFont.caption2)
                 .foregroundStyle(.secondary)
                 .frame(width: 32, alignment: .trailing)
         }

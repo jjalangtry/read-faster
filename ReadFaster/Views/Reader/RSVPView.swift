@@ -106,6 +106,44 @@ struct RSVPView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.willResignActiveNotification)) { _ in
             engine.pause()
         }
+        // Keyboard shortcuts for macOS
+        .onKeyPress(.space) {
+            engine.toggle()
+            return .handled
+        }
+        .onKeyPress("k") {
+            engine.toggle()
+            return .handled
+        }
+        .onKeyPress(.leftArrow) {
+            engine.previousSentence()
+            return .handled
+        }
+        .onKeyPress(.rightArrow) {
+            engine.nextSentence()
+            return .handled
+        }
+        .onKeyPress("j") {
+            engine.previousSentence()
+            return .handled
+        }
+        .onKeyPress("l") {
+            engine.nextSentence()
+            return .handled
+        }
+        .onKeyPress(.upArrow) {
+            engine.wordsPerMinute = min(RSVPEngine.maxWPM, engine.wordsPerMinute + 25)
+            return .handled
+        }
+        .onKeyPress(.downArrow) {
+            engine.wordsPerMinute = max(RSVPEngine.minWPM, engine.wordsPerMinute - 25)
+            return .handled
+        }
+        .onKeyPress("r") {
+            engine.replayCurrentSentence()
+            return .handled
+        }
+        .focusable()
         #else
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in
             engine.pause()
@@ -116,6 +154,20 @@ struct RSVPView: View {
     @ViewBuilder
     private func wordDisplayArea(geometry: GeometryProxy) -> some View {
         VStack(spacing: 0) {
+            // Sentence context - fixed box above RSVP word
+            Group {
+                if engine.showSentenceContext && !engine.currentSentenceWords.isEmpty {
+                    SentenceContextView(
+                        words: engine.currentSentenceWords,
+                        currentWordIndex: engine.currentWordIndexInSentence
+                    )
+                    .frame(maxWidth: min(geometry.size.width * 0.95, 600))
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                }
+            }
+            .frame(height: 132) // Fixed height for ~3 lines of sentence context
+            .padding(.bottom, 16)
+            
             // Main RSVP word - always in the same position
             WordDisplay(word: engine.currentWord)
                 .frame(maxWidth: min(geometry.size.width * 0.9, 600))
@@ -123,31 +175,12 @@ struct RSVPView: View {
                 .onTapGesture {
                     engine.toggle()
                 }
-            
-            // Fixed-height spacer for sentence context
-            // This ensures the word display stays in place regardless of context visibility
-            Group {
-                if engine.showSentenceContext && !engine.currentSentenceWords.isEmpty {
-                    SentenceContextView(
-                        words: engine.currentSentenceWords,
-                        currentWordIndex: engine.currentWordIndexInSentence
-                    )
-                    .frame(maxWidth: min(geometry.size.width * 0.95, 650))
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
-                    .padding(.top, 24)
-                } else {
-                    // Reserve space even when hidden to prevent layout shift
-                    Color.clear
-                        .frame(height: 96)
-                }
-            }
-            .frame(height: 96)
-            
+
             // Status text
             Text(statusText)
                 .font(.caption)
                 .foregroundStyle(.tertiary)
-                .padding(.top, 8)
+                .padding(.top, 16)
         }
     }
 
@@ -177,8 +210,8 @@ struct RSVPView: View {
                     disabled: !engine.hasContent || engine.isAtStart,
                     size: controlButtonSize
                 )
-                
-                // Play/Pause - larger, prominent
+
+                    // Play/Pause - larger, prominent
                 HoldableButton(
                     icon: engine.isPlaying ? "pause.fill" : "play.fill",
                     onTap: { engine.toggle() },
@@ -274,9 +307,9 @@ struct WPMControl: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            if isExpanded {
+        if isExpanded {
                 // Expanded slider view
-                HStack(spacing: 12) {
+            HStack(spacing: 12) {
                     Button {
                         withAnimation(.easeInOut(duration: 0.2)) {
                             isExpanded = false
@@ -284,14 +317,14 @@ struct WPMControl: View {
                     } label: {
                         Image(systemName: "xmark")
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.secondary)
+                    .foregroundStyle(.secondary)
                             .frame(width: 32, height: 32)
                     }
                     .buttonStyle(.plain)
 
-                    Slider(
-                        value: $sliderValue,
-                        in: Double(RSVPEngine.minWPM)...Double(RSVPEngine.maxWPM),
+                Slider(
+                    value: $sliderValue,
+                    in: Double(RSVPEngine.minWPM)...Double(RSVPEngine.maxWPM),
                         step: Double(step)
                     )
                     .frame(minWidth: 120, maxWidth: 200)
@@ -299,15 +332,15 @@ struct WPMControl: View {
                         wpm = Int(newValue)
                     }
 
-                    Text("\(Int(sliderValue))")
-                        .font(.subheadline.weight(.semibold))
-                        .monospacedDigit()
+                Text("\(Int(sliderValue))")
+                        .font(AppFont.semibold(size: 15))
+                    .monospacedDigit()
                         .frame(width: 44)
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
-                .background(.regularMaterial, in: Capsule())
-            } else {
+            .background(.regularMaterial, in: Capsule())
+        } else {
                 // Compact stepper view with hold-to-repeat
                 HStack(spacing: 4) {
                     // Decrease button - holdable
@@ -321,18 +354,18 @@ struct WPMControl: View {
                     )
 
                     // WPM display - tap to expand slider
-                    Button {
-                        sliderValue = Double(wpm)
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            isExpanded = true
-                        }
-                    } label: {
+            Button {
+                sliderValue = Double(wpm)
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isExpanded = true
+                }
+            } label: {
                         VStack(spacing: 2) {
                             Text("\(wpm)")
-                                .font(.headline)
-                                .monospacedDigit()
+                                .font(AppFont.headline)
+                        .monospacedDigit()
                             Text("WPM")
-                                .font(.caption2)
+                                .font(AppFont.caption2)
                                 .foregroundStyle(.secondary)
                         }
                         .frame(width: 56)
@@ -511,12 +544,11 @@ struct ModeButton: View {
         Button(action: action) {
             HStack(spacing: 6) {
                 Image(systemName: mode.icon)
-                    .font(.subheadline)
+                    .font(AppFont.subheadline)
 
                 if isSelected {
                     Text(mode.displayName)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
+                        .font(AppFont.medium(size: 15))
                 }
             }
             .foregroundStyle(isSelected ? .primary : .secondary)
