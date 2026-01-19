@@ -11,18 +11,28 @@ struct ImportView: View {
     @State private var showingError = false
     @State private var isProcessing = false
     @State private var isDragOver = false
+    @Namespace private var importNamespace
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 24) {
+            VStack(spacing: 32) {
+                Spacer()
+
                 dropZone
 
                 supportedFormatsInfo
 
                 if isProcessing {
-                    ProgressView("Importing...")
-                        .padding()
+                    VStack(spacing: 12) {
+                        ProgressView()
+                            .controlSize(.large)
+                        Text("Importing...")
+                            .font(.headline)
+                    }
+                    .padding()
                 }
+
+                Spacer()
             }
             .padding()
             .navigationTitle("Import Book")
@@ -49,40 +59,41 @@ struct ImportView: View {
                 Text(importError ?? "Unknown error occurred")
             }
         }
-        #if os(macOS)
-        .frame(minWidth: 400, minHeight: 300)
-        #endif
     }
 
     private var dropZone: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "doc.badge.plus")
-                .font(.system(size: 60))
-                .foregroundStyle(isDragOver ? .accentColor : .secondary)
+        GlassEffectContainer {
+            VStack(spacing: 20) {
+                Image(systemName: "doc.badge.plus")
+                    .font(.system(size: 56))
+                    .foregroundStyle(isDragOver ? .accent : .secondary)
+                    .symbolEffect(.bounce, value: isDragOver)
 
-            Text("Drop a file here")
-                .font(.headline)
+                VStack(spacing: 8) {
+                    Text("Drop a file here")
+                        .font(.title3)
+                        .fontWeight(.medium)
 
-            Text("or")
-                .foregroundStyle(.secondary)
+                    Text("or")
+                        .foregroundStyle(.secondary)
+                }
 
-            Button("Browse Files") {
-                isImporting = true
+                Button {
+                    isImporting = true
+                } label: {
+                    Text("Browse Files")
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 12)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
             }
-            .buttonStyle(.borderedProminent)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(40)
-        .background {
-            RoundedRectangle(cornerRadius: 16)
-                .strokeBorder(
-                    isDragOver ? Color.accentColor : Color.secondary.opacity(0.3),
-                    style: StrokeStyle(lineWidth: 2, dash: [8])
-                )
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(isDragOver ? Color.accentColor.opacity(0.1) : Color.clear)
-                )
+            .frame(maxWidth: .infinity)
+            .padding(48)
+            .glassEffect(
+                isDragOver ? .regular.tint(.accentColor) : .regular,
+                in: RoundedRectangle(cornerRadius: 24)
+            )
         }
         .onDrop(of: supportedTypes, isTargeted: $isDragOver) { providers in
             handleDrop(providers)
@@ -91,14 +102,16 @@ struct ImportView: View {
     }
 
     private var supportedFormatsInfo: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("Supported Formats")
                 .font(.headline)
 
-            HStack(spacing: 16) {
-                FormatBadge(icon: "book.closed", label: "EPUB", description: "Best quality")
-                FormatBadge(icon: "doc.richtext", label: "PDF", description: "With OCR")
-                FormatBadge(icon: "doc.text", label: "TXT", description: "Plain text")
+            GlassEffectContainer(spacing: 12) {
+                HStack(spacing: 12) {
+                    FormatBadge(icon: "book.closed", label: "EPUB", description: "Best quality")
+                    FormatBadge(icon: "doc.richtext", label: "PDF", description: "With OCR")
+                    FormatBadge(icon: "doc.text", label: "TXT", description: "Plain text")
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -115,7 +128,6 @@ struct ImportView: View {
             if provider.hasItemConformingToTypeIdentifier(type.identifier) {
                 provider.loadFileRepresentation(forTypeIdentifier: type.identifier) { url, error in
                     if let url = url {
-                        // Copy to temporary location since the provided URL is temporary
                         let tempURL = FileManager.default.temporaryDirectory
                             .appendingPathComponent(url.lastPathComponent)
 
@@ -150,7 +162,6 @@ struct ImportView: View {
         defer { isProcessing = false }
 
         do {
-            // Start accessing security-scoped resource
             let accessing = url.startAccessingSecurityScopedResource()
             defer {
                 if accessing {
@@ -175,29 +186,25 @@ struct FormatBadge: View {
     let description: String
 
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 6) {
             Image(systemName: icon)
                 .font(.title2)
-                .foregroundStyle(.accentColor)
+                .foregroundStyle(.accent)
 
             Text(label)
                 .font(.caption)
-                .fontWeight(.medium)
+                .fontWeight(.semibold)
 
             Text(description)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
-        .background {
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color.secondary.opacity(0.1))
-        }
+        .padding(.vertical, 16)
+        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 12))
     }
 }
 
-// MARK: - UTType Extensions
 extension UTType {
     static var epub: UTType {
         UTType(filenameExtension: "epub") ?? .data

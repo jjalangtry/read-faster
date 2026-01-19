@@ -9,18 +9,6 @@ struct LibraryView: View {
     @Binding var selectedBook: Book?
     @Binding var showingImport: Bool
 
-    @State private var searchText = ""
-
-    private var filteredBooks: [Book] {
-        if searchText.isEmpty {
-            return books
-        }
-        return books.filter { book in
-            book.title.localizedCaseInsensitiveContains(searchText) ||
-            (book.author?.localizedCaseInsensitiveContains(searchText) ?? false)
-        }
-    }
-
     var body: some View {
         Group {
             if books.isEmpty {
@@ -30,7 +18,6 @@ struct LibraryView: View {
             }
         }
         .navigationTitle("Library")
-        .searchable(text: $searchText, prompt: "Search books")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
@@ -52,18 +39,27 @@ struct LibraryView: View {
                 showingImport = true
             }
             .buttonStyle(.borderedProminent)
+            .controlSize(.large)
         }
     }
 
     private var libraryGrid: some View {
         ScrollView {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 150, maximum: 180))], spacing: 20) {
-                ForEach(filteredBooks) { book in
+                ForEach(books) { book in
                     BookCard(book: book)
                         .onTapGesture {
                             selectedBook = book
                         }
                         .contextMenu {
+                            Button {
+                                selectedBook = book
+                            } label: {
+                                Label("Read", systemImage: "book")
+                            }
+
+                            Divider()
+
                             Button(role: .destructive) {
                                 deleteBook(book)
                             } label: {
@@ -77,8 +73,10 @@ struct LibraryView: View {
     }
 
     private func deleteBook(_ book: Book) {
-        modelContext.delete(book)
-        try? modelContext.save()
+        withAnimation {
+            modelContext.delete(book)
+            try? modelContext.save()
+        }
     }
 }
 

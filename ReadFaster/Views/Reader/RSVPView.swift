@@ -10,56 +10,64 @@ struct RSVPView: View {
     @StateObject private var engine = RSVPEngine()
     @State private var showingBookmarks = false
     @State private var showingSettings = false
+    @Namespace private var controlsNamespace
 
     var body: some View {
         GeometryReader { geometry in
-            VStack(spacing: 0) {
-                Spacer()
+            ZStack {
+                // Background - allows glass to sample content
+                Color(.systemBackground)
+                    .ignoresSafeArea()
 
-                wordDisplayArea(geometry: geometry)
+                VStack(spacing: 0) {
+                    Spacer()
 
-                Spacer()
+                    wordDisplayArea(geometry: geometry)
 
-                controlsArea
+                    Spacer()
+
+                    // Floating glass controls at bottom
+                    floatingControls
+                        .padding(.horizontal)
+                        .padding(.bottom, 8)
+                }
             }
         }
-        .background(Color(.systemBackground))
         .navigationTitle(book.title)
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Menu {
-                    Button {
-                        showingBookmarks = true
-                    } label: {
-                        Label("Bookmarks", systemImage: "bookmark")
-                    }
-
+                HStack(spacing: 8) {
                     Button {
                         addBookmark()
                     } label: {
-                        Label("Add Bookmark", systemImage: "bookmark.fill")
+                        Image(systemName: "bookmark")
                     }
+                    .badge(book.bookmarks.count > 0 ? "\(book.bookmarks.count)" : nil)
 
-                    Divider()
+                    Button {
+                        showingBookmarks = true
+                    } label: {
+                        Image(systemName: "list.bullet")
+                    }
 
                     Button {
                         showingSettings = true
                     } label: {
-                        Label("Settings", systemImage: "gear")
+                        Image(systemName: "gear")
                     }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
                 }
             }
         }
         .sheet(isPresented: $showingBookmarks) {
             BookmarksSheet(book: book, engine: engine)
+                .presentationDetents([.medium, .large])
         }
         .sheet(isPresented: $showingSettings) {
             ReaderSettingsSheet(engine: engine)
+                .presentationDetents([.medium])
         }
         .onAppear {
             setupEngine()
@@ -87,20 +95,6 @@ struct RSVPView: View {
                 .onTapGesture {
                     engine.toggle()
                 }
-                #if os(macOS)
-                .onKeyPress(.space) {
-                    engine.toggle()
-                    return .handled
-                }
-                .onKeyPress(.leftArrow) {
-                    engine.skipBackward()
-                    return .handled
-                }
-                .onKeyPress(.rightArrow) {
-                    engine.skipForward()
-                    return .handled
-                }
-                #endif
 
             Text(statusText)
                 .font(.caption)
@@ -108,8 +102,9 @@ struct RSVPView: View {
         }
     }
 
-    private var controlsArea: some View {
+    private var floatingControls: some View {
         VStack(spacing: 16) {
+            // Progress bar
             ProgressSlider(
                 value: Binding(
                     get: { engine.progress },
@@ -118,10 +113,67 @@ struct RSVPView: View {
                 isPlaying: engine.isPlaying
             )
 
-            ControlsView(engine: engine)
+            // Playback controls with Liquid Glass
+            GlassEffectContainer {
+                HStack(spacing: 24) {
+                    // Skip backward
+                    Button {
+                        engine.previousSentence()
+                    } label: {
+                        Image(systemName: "backward.end.fill")
+                            .font(.title3)
+                            .frame(width: 44, height: 44)
+                    }
+                    .glassEffect(.regular.interactive())
+                    .disabled(!engine.hasContent)
+
+                    Button {
+                        engine.skipBackward()
+                    } label: {
+                        Image(systemName: "gobackward.10")
+                            .font(.title3)
+                            .frame(width: 44, height: 44)
+                    }
+                    .glassEffect(.regular.interactive())
+                    .disabled(engine.isAtStart)
+
+                    // Play/Pause - larger, prominent
+                    Button {
+                        engine.toggle()
+                    } label: {
+                        Image(systemName: engine.isPlaying ? "pause.fill" : "play.fill")
+                            .font(.title)
+                            .frame(width: 64, height: 64)
+                    }
+                    .glassEffect(.regular.tint(.accentColor).interactive())
+                    .disabled(!engine.hasContent)
+
+                    Button {
+                        engine.skipForward()
+                    } label: {
+                        Image(systemName: "goforward.10")
+                            .font(.title3)
+                            .frame(width: 44, height: 44)
+                    }
+                    .glassEffect(.regular.interactive())
+                    .disabled(engine.isAtEnd)
+
+                    // Skip forward
+                    Button {
+                        engine.nextSentence()
+                    } label: {
+                        Image(systemName: "forward.end.fill")
+                            .font(.title3)
+                            .frame(width: 44, height: 44)
+                    }
+                    .glassEffect(.regular.interactive())
+                    .disabled(!engine.hasContent)
+                }
+            }
+
+            // WPM control with glass
+            WPMControl(wpm: $engine.wordsPerMinute)
         }
-        .padding()
-        .background(.regularMaterial)
     }
 
     private var statusText: String {
@@ -141,7 +193,7 @@ struct RSVPView: View {
 
         // Setup progress callback
         engine.onProgressUpdate = { [weak engine] wordIndex, sessionTime, wordsRead in
-            guard let engine = engine else { return }
+            guard engine != nil else { return }
             Task { @MainActor in
                 let storage = StorageService(modelContext: modelContext)
                 try? storage.updateProgress(
@@ -172,6 +224,70 @@ struct RSVPView: View {
             at: engine.currentIndex,
             highlightedText: context
         )
+    }
+}
+
+struct WPMControl: View {
+    @Binding var wpm: Int
+    @State private var isExpanded = false
+    @Namespace private var wpmNamespace
+
+    var body: some View {
+        GlassEffectContainer(spacing: 20) {
+            if isExpanded {
+                // Expanded slider view
+                HStack(spacing: 12) {
+                    Text("\(RSVPEngine.minWPM)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Slider(
+                        value: Binding(
+                            get: { Double(wpm) },
+                            set: { wpm = Int($0) }
+                        ),
+                        in: Double(RSVPEngine.minWPM)...Double(RSVPEngine.maxWPM),
+                        step: 25
+                    )
+                    .frame(width: 200)
+
+                    Text("\(RSVPEngine.maxWPM)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Button {
+                        withAnimation(.bouncy) {
+                            isExpanded = false
+                        }
+                    } label: {
+                        Image(systemName: "checkmark")
+                            .frame(width: 32, height: 32)
+                    }
+                    .glassEffect(.regular.interactive())
+                    .glassEffectID("wpmToggle", in: wpmNamespace)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .glassEffect(.regular, in: .capsule)
+            } else {
+                // Collapsed button
+                Button {
+                    withAnimation(.bouncy) {
+                        isExpanded = true
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "speedometer")
+                        Text("\(wpm) WPM")
+                            .monospacedDigit()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                }
+                .glassEffect(.regular.interactive())
+                .glassEffectID("wpmToggle", in: wpmNamespace)
+            }
+        }
     }
 }
 

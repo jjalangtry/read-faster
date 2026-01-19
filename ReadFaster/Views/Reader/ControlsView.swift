@@ -5,58 +5,64 @@ struct ControlsView: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            // Playback controls
-            HStack(spacing: 32) {
-                // Previous sentence
-                Button {
-                    engine.previousSentence()
-                } label: {
-                    Image(systemName: "backward.end.fill")
-                        .font(.title2)
-                }
-                .buttonStyle(.plain)
-                .disabled(!engine.hasContent)
+            // Playback controls with glass effect
+            GlassEffectContainer {
+                HStack(spacing: 32) {
+                    // Previous sentence
+                    Button {
+                        engine.previousSentence()
+                    } label: {
+                        Image(systemName: "backward.end.fill")
+                            .font(.title2)
+                            .frame(width: 44, height: 44)
+                    }
+                    .glassEffect(.regular.interactive())
+                    .disabled(!engine.hasContent)
 
-                // Skip backward
-                Button {
-                    engine.skipBackward()
-                } label: {
-                    Image(systemName: "gobackward.10")
-                        .font(.title2)
-                }
-                .buttonStyle(.plain)
-                .disabled(engine.isAtStart)
+                    // Skip backward
+                    Button {
+                        engine.skipBackward()
+                    } label: {
+                        Image(systemName: "gobackward.10")
+                            .font(.title2)
+                            .frame(width: 44, height: 44)
+                    }
+                    .glassEffect(.regular.interactive())
+                    .disabled(engine.isAtStart)
 
-                // Play/Pause
-                Button {
-                    engine.toggle()
-                } label: {
-                    Image(systemName: engine.isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                        .font(.system(size: 56))
-                }
-                .buttonStyle(.plain)
-                .disabled(!engine.hasContent)
-                .keyboardShortcut(.space, modifiers: [])
+                    // Play/Pause
+                    Button {
+                        engine.toggle()
+                    } label: {
+                        Image(systemName: engine.isPlaying ? "pause.fill" : "play.fill")
+                            .font(.largeTitle)
+                            .frame(width: 64, height: 64)
+                    }
+                    .glassEffect(.regular.tint(.accentColor).interactive())
+                    .disabled(!engine.hasContent)
 
-                // Skip forward
-                Button {
-                    engine.skipForward()
-                } label: {
-                    Image(systemName: "goforward.10")
-                        .font(.title2)
-                }
-                .buttonStyle(.plain)
-                .disabled(engine.isAtEnd)
+                    // Skip forward
+                    Button {
+                        engine.skipForward()
+                    } label: {
+                        Image(systemName: "goforward.10")
+                            .font(.title2)
+                            .frame(width: 44, height: 44)
+                    }
+                    .glassEffect(.regular.interactive())
+                    .disabled(engine.isAtEnd)
 
-                // Next sentence
-                Button {
-                    engine.nextSentence()
-                } label: {
-                    Image(systemName: "forward.end.fill")
-                        .font(.title2)
+                    // Next sentence
+                    Button {
+                        engine.nextSentence()
+                    } label: {
+                        Image(systemName: "forward.end.fill")
+                            .font(.title2)
+                            .frame(width: 44, height: 44)
+                    }
+                    .glassEffect(.regular.interactive())
+                    .disabled(!engine.hasContent)
                 }
-                .buttonStyle(.plain)
-                .disabled(!engine.hasContent)
             }
 
             // WPM slider
@@ -69,7 +75,7 @@ struct WPMSlider: View {
     @Binding var wpm: Int
 
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 8) {
             HStack {
                 Text("\(RSVPEngine.minWPM)")
                     .font(.caption2)
@@ -106,24 +112,25 @@ struct ProgressSlider: View {
         GeometryReader { geometry in
             ZStack(alignment: .leading) {
                 // Track
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(Color.secondary.opacity(0.3))
-                    .frame(height: 4)
+                Capsule()
+                    .fill(Color.secondary.opacity(0.2))
+                    .frame(height: 6)
 
                 // Fill
-                RoundedRectangle(cornerRadius: 2)
+                Capsule()
                     .fill(Color.accentColor)
-                    .frame(width: geometry.size.width * value, height: 4)
+                    .frame(width: max(6, geometry.size.width * value), height: 6)
 
-                // Thumb (only visible when dragging or paused)
+                // Thumb (visible when dragging or paused)
                 if isDragging || !isPlaying {
                     Circle()
                         .fill(Color.accentColor)
-                        .frame(width: 16, height: 16)
-                        .offset(x: (geometry.size.width - 16) * value)
+                        .frame(width: 20, height: 20)
+                        .shadow(color: .accentColor.opacity(0.3), radius: 4)
+                        .offset(x: max(0, min(geometry.size.width - 20, (geometry.size.width - 20) * value)))
                 }
             }
-            .frame(height: 20)
+            .frame(height: 24)
             .contentShape(Rectangle())
             .gesture(
                 DragGesture(minimumDistance: 0)
@@ -137,7 +144,7 @@ struct ProgressSlider: View {
                     }
             )
         }
-        .frame(height: 20)
+        .frame(height: 24)
     }
 }
 

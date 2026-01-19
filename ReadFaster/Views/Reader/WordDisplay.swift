@@ -11,7 +11,7 @@ struct WordDisplay: View {
     }
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 12) {
             // Guide line above
             guideLine
 
@@ -22,10 +22,11 @@ struct WordDisplay: View {
                     .foregroundStyle(.primary)
                     .frame(minWidth: 0, maxWidth: .infinity, alignment: .trailing)
 
-                // Focal character (red)
+                // Focal character (red) - this is the key visual anchor
                 if let focal = orpWord.focal {
                     Text(String(focal))
                         .foregroundStyle(.red)
+                        .fontWeight(.bold)
                 }
 
                 // After ORP (left-aligned from focal point)
@@ -41,22 +42,24 @@ struct WordDisplay: View {
             ZStack {
                 guideLine
 
-                // Focal point indicator
-                Rectangle()
-                    .fill(Color.red)
-                    .frame(width: 2, height: 12)
-                    .offset(y: -4)
+                // Focal point indicator - red triangle pointing up
+                Image(systemName: "triangle.fill")
+                    .font(.system(size: 8))
+                    .foregroundStyle(.red)
+                    .rotationEffect(.degrees(180))
+                    .offset(y: -6)
             }
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 40)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 48)
         .accessibilityElement()
         .accessibilityLabel(word)
+        .accessibilityHint("Current word in RSVP reader")
     }
 
     private var guideLine: some View {
         Rectangle()
-            .fill(Color.secondary.opacity(0.3))
+            .fill(Color.secondary.opacity(0.2))
             .frame(height: 1)
     }
 }
