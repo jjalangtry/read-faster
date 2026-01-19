@@ -5,6 +5,21 @@ struct ParsedDocument {
     let author: String?
     let content: String
     let coverImage: Data?
+    let chapters: [Chapter]
+
+    init(
+        title: String,
+        author: String? = nil,
+        content: String,
+        coverImage: Data? = nil,
+        chapters: [Chapter] = []
+    ) {
+        self.title = title
+        self.author = author
+        self.content = content
+        self.coverImage = coverImage
+        self.chapters = chapters
+    }
 
     var wordCount: Int {
         content.components(separatedBy: .whitespacesAndNewlines)

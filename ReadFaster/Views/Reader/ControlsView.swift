@@ -5,30 +5,39 @@ struct ControlsView: View {
 
     var body: some View {
         VStack(spacing: 16) {
+            // Reading mode selector
+            ReadingModeSelector(currentMode: engine.currentMode) { mode in
+                engine.applyMode(mode)
+            }
+
             // Playback controls with glass effect
             GlassEffectContainer {
-                HStack(spacing: 32) {
+                HStack(spacing: 24) {
+                    // Replay previous sentence
+                    Button {
+                        engine.replayPreviousSentence()
+                    } label: {
+                        Image(systemName: "arrow.counterclockwise")
+                            .font(.title2)
+                            .foregroundStyle(.primary)
+                            .frame(width: 44, height: 44)
+                    }
+                    .buttonStyle(.plain)
+                    .glassEffect(.regular.interactive(), in: Circle())
+                    .disabled(!engine.hasContent || engine.isAtStart)
+
                     // Previous sentence
                     Button {
                         engine.previousSentence()
                     } label: {
                         Image(systemName: "backward.end.fill")
                             .font(.title2)
+                            .foregroundStyle(.primary)
                             .frame(width: 44, height: 44)
                     }
-                    .glassEffect(.regular.interactive())
-                    .disabled(!engine.hasContent)
-
-                    // Skip backward
-                    Button {
-                        engine.skipBackward()
-                    } label: {
-                        Image(systemName: "gobackward.10")
-                            .font(.title2)
-                            .frame(width: 44, height: 44)
-                    }
-                    .glassEffect(.regular.interactive())
-                    .disabled(engine.isAtStart)
+                    .buttonStyle(.plain)
+                    .glassEffect(.regular.interactive(), in: Circle())
+                    .disabled(!engine.hasContent || engine.isAtStart)
 
                     // Play/Pause
                     Button {
@@ -36,21 +45,12 @@ struct ControlsView: View {
                     } label: {
                         Image(systemName: engine.isPlaying ? "pause.fill" : "play.fill")
                             .font(.largeTitle)
+                            .foregroundStyle(.primary)
                             .frame(width: 64, height: 64)
                     }
-                    .glassEffect(.regular.tint(.accentColor).interactive())
+                    .buttonStyle(.plain)
+                    .glassEffect(.regular.tint(.accentColor).interactive(), in: Circle())
                     .disabled(!engine.hasContent)
-
-                    // Skip forward
-                    Button {
-                        engine.skipForward()
-                    } label: {
-                        Image(systemName: "goforward.10")
-                            .font(.title2)
-                            .frame(width: 44, height: 44)
-                    }
-                    .glassEffect(.regular.interactive())
-                    .disabled(engine.isAtEnd)
 
                     // Next sentence
                     Button {
@@ -58,10 +58,12 @@ struct ControlsView: View {
                     } label: {
                         Image(systemName: "forward.end.fill")
                             .font(.title2)
+                            .foregroundStyle(.primary)
                             .frame(width: 44, height: 44)
                     }
-                    .glassEffect(.regular.interactive())
-                    .disabled(!engine.hasContent)
+                    .buttonStyle(.plain)
+                    .glassEffect(.regular.interactive(), in: Circle())
+                    .disabled(engine.isAtEnd)
                 }
             }
 

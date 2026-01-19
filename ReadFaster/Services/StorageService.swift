@@ -32,7 +32,8 @@ final class StorageService {
             fileType: fileType,
             coverImage: document.coverImage,
             content: document.content,
-            totalWords: document.wordCount
+            totalWords: document.wordCount,
+            chapters: document.chapters
         )
 
         // Create initial progress

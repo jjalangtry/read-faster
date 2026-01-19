@@ -20,26 +20,40 @@ struct EPUBParser: DocumentParser {
         // 1. Find the root file path from container.xml
         let rootFilePath = try findRootFile(in: archive)
 
-        // 2. Parse the OPF file to get metadata and spine
-        let (metadata, spine, basePath) = try parseOPF(archive: archive, opfPath: rootFilePath)
+        // 2. Parse the OPF file to get metadata, spine, manifest, and TOC reference
+        let opfResult = try parseOPF(archive: archive, opfPath: rootFilePath)
 
-        // 3. Extract text content in spine order
-        let content = try extractContent(archive: archive, spine: spine, basePath: basePath)
+        // 3. Extract text content in spine order, tracking word positions per spine item
+        let (content, spineWordPositions) = try extractContentWithPositions(
+            archive: archive,
+            spine: opfResult.spine,
+            basePath: opfResult.basePath
+        )
 
         guard !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw DocumentParserError.emptyContent
         }
 
         // 4. Try to extract cover image
-        let coverImage = try? extractCover(archive: archive, metadata: metadata, basePath: basePath)
+        let coverImage = try? extractCover(archive: archive, metadata: opfResult.metadata, basePath: opfResult.basePath)
+
+        // 5. Extract table of contents and map to word positions
+        let chapters = try extractChapters(
+            archive: archive,
+            opfResult: opfResult,
+            spineWordPositions: spineWordPositions
+        )
 
         return ParsedDocument(
-            title: metadata.title ?? url.deletingPathExtension().lastPathComponent,
-            author: metadata.author,
+            title: opfResult.metadata.title ?? url.deletingPathExtension().lastPathComponent,
+            author: opfResult.metadata.author,
             content: content,
-            coverImage: coverImage
+            coverImage: coverImage,
+            chapters: chapters
         )
     }
+
+    // MARK: - Container Parsing
 
     private func findRootFile(in archive: Archive) throws -> String {
         guard let containerEntry = archive["META-INF/container.xml"] else {
@@ -80,7 +94,9 @@ struct EPUBParser: DocumentParser {
         }
     }
 
-    private func parseOPF(archive: Archive, opfPath: String) throws -> (EPUBMetadata, [SpineItem], String) {
+    // MARK: - OPF Parsing
+
+    private func parseOPF(archive: Archive, opfPath: String) throws -> OPFResult {
         guard let opfEntry = archive[opfPath] else {
             throw DocumentParserError.parsingFailed("Missing OPF file at \(opfPath)")
         }
@@ -103,12 +119,11 @@ struct EPUBParser: DocumentParser {
         do {
             let doc = try SwiftSoup.parse(opfXML, "", Parser.xmlParser())
 
-            // Extract metadata - try multiple selector patterns for compatibility
+            // Extract metadata
             var title: String?
             var author: String?
             var coverId: String?
 
-            // Try to find title
             if let titleEl = try doc.select("title").first() {
                 title = try titleEl.text()
             }
@@ -118,7 +133,6 @@ struct EPUBParser: DocumentParser {
                 }
             }
 
-            // Try to find author/creator
             if let authorEl = try doc.select("creator").first() {
                 author = try authorEl.text()
             }
@@ -128,7 +142,6 @@ struct EPUBParser: DocumentParser {
                 }
             }
 
-            // Try to find cover ID
             if let metaEl = try doc.select("meta[name=cover]").first() {
                 coverId = try metaEl.attr("content")
             }
@@ -140,8 +153,9 @@ struct EPUBParser: DocumentParser {
                 let id = try item.attr("id")
                 let href = try item.attr("href")
                 let mediaType = try item.attr("media-type")
+                let properties = try item.attr("properties")
                 if !id.isEmpty && !href.isEmpty {
-                    manifest[id] = ManifestItem(id: id, href: href, mediaType: mediaType)
+                    manifest[id] = ManifestItem(id: id, href: href, mediaType: mediaType, properties: properties)
                 }
             }
 
@@ -155,10 +169,52 @@ struct EPUBParser: DocumentParser {
                 }
             }
 
+            // Find TOC reference
+            // EPUB3: Look for nav item with properties="nav"
+            var tocHref: String?
+            var tocType: TOCType = .none
+
+            for (_, item) in manifest {
+                if item.properties.contains("nav") {
+                    tocHref = item.href
+                    tocType = .nav
+                    break
+                }
+            }
+
+            // EPUB2: Look for NCX in spine toc attribute or manifest
+            if tocType == .none {
+                if let spineEl = try doc.select("spine").first() {
+                    let tocId = try spineEl.attr("toc")
+                    if !tocId.isEmpty, let ncxItem = manifest[tocId] {
+                        tocHref = ncxItem.href
+                        tocType = .ncx
+                    }
+                }
+            }
+
+            // Fallback: look for .ncx file in manifest
+            if tocType == .none {
+                for (_, item) in manifest {
+                    if item.mediaType == "application/x-dtbncx+xml" || item.href.hasSuffix(".ncx") {
+                        tocHref = item.href
+                        tocType = .ncx
+                        break
+                    }
+                }
+            }
+
             let coverHref = coverId.flatMap { manifest[$0]?.href }
             let metadata = EPUBMetadata(title: title, author: author, coverId: coverId, coverHref: coverHref)
 
-            return (metadata, spine, basePath)
+            return OPFResult(
+                metadata: metadata,
+                manifest: manifest,
+                spine: spine,
+                basePath: basePath,
+                tocHref: tocHref,
+                tocType: tocType
+            )
         } catch let error as DocumentParserError {
             throw error
         } catch {
@@ -166,11 +222,18 @@ struct EPUBParser: DocumentParser {
         }
     }
 
-    private func extractContent(archive: Archive, spine: [SpineItem], basePath: String) throws -> String {
+    // MARK: - Content Extraction with Word Positions
+
+    private func extractContentWithPositions(
+        archive: Archive,
+        spine: [SpineItem],
+        basePath: String
+    ) throws -> (String, [String: Int]) {
         var fullContent = ""
+        var currentWordIndex = 0
+        var spineWordPositions: [String: Int] = [:]
         var foundMainContent = false
 
-        // Patterns to skip (front matter)
         let skipPatterns = [
             "cover", "title", "toc", "nav", "copyright", "dedication",
             "frontmatter", "front-matter", "halftitle", "half-title",
@@ -179,48 +242,47 @@ struct EPUBParser: DocumentParser {
 
         for item in spine {
             let hrefLower = item.href.lowercased()
-
-            // Skip front matter files
             let shouldSkip = skipPatterns.contains { pattern in
                 hrefLower.contains(pattern)
             }
 
-            // Once we find real content, stop skipping
             if !foundMainContent && shouldSkip {
                 continue
             }
 
-            // Handle URL-encoded paths and resolve relative paths
             let decodedHref = item.href.removingPercentEncoding ?? item.href
             let itemPath = basePath.isEmpty ? decodedHref : "\(basePath)/\(decodedHref)"
 
-            guard let entry = archive[itemPath] else {
-                // Try without base path as fallback
-                if let fallbackEntry = archive[decodedHref] {
-                    if let text = extractTextFromEntry(archive: archive, entry: fallbackEntry) {
-                        if !text.isEmpty && text.count > 100 {
-                            foundMainContent = true
-                        }
-                        if foundMainContent {
-                            fullContent += text + "\n\n"
-                        }
-                    }
-                }
-                continue
+            var text: String?
+
+            if let entry = archive[itemPath] {
+                text = extractTextFromEntry(archive: archive, entry: entry)
+            } else if let fallbackEntry = archive[decodedHref] {
+                text = extractTextFromEntry(archive: archive, entry: fallbackEntry)
             }
 
-            if let text = extractTextFromEntry(archive: archive, entry: entry) {
-                // Consider it main content if it has substantial text
-                if !text.isEmpty && text.count > 100 {
+            if let extractedText = text, !extractedText.isEmpty {
+                if extractedText.count > 100 {
                     foundMainContent = true
                 }
+
                 if foundMainContent {
-                    fullContent += text + "\n\n"
+                    // Record the word position for this spine item
+                    // Use the href (without fragment) as the key
+                    let baseHref = decodedHref.components(separatedBy: "#").first ?? decodedHref
+                    spineWordPositions[baseHref] = currentWordIndex
+
+                    // Count words and append
+                    let words = extractedText.components(separatedBy: .whitespacesAndNewlines)
+                        .filter { !$0.isEmpty }
+                    currentWordIndex += words.count
+
+                    fullContent += extractedText + "\n\n"
                 }
             }
         }
 
-        return fullContent.trimmingCharacters(in: .whitespacesAndNewlines)
+        return (fullContent.trimmingCharacters(in: .whitespacesAndNewlines), spineWordPositions)
     }
 
     private func extractTextFromEntry(archive: Archive, entry: Entry) -> String? {
@@ -233,7 +295,6 @@ struct EPUBParser: DocumentParser {
             return nil
         }
 
-        // Try UTF-8 first, then Latin-1
         let html: String
         if let utf8 = String(data: data, encoding: .utf8) {
             html = utf8
@@ -250,6 +311,192 @@ struct EPUBParser: DocumentParser {
             return nil
         }
     }
+
+    // MARK: - Chapter Extraction
+
+    private func extractChapters(
+        archive: Archive,
+        opfResult: OPFResult,
+        spineWordPositions: [String: Int]
+    ) throws -> [Chapter] {
+        guard let tocHref = opfResult.tocHref else {
+            return []
+        }
+
+        let decodedTocHref = tocHref.removingPercentEncoding ?? tocHref
+        let tocPath = opfResult.basePath.isEmpty ? decodedTocHref : "\(opfResult.basePath)/\(decodedTocHref)"
+
+        guard let tocEntry = archive[tocPath] ?? archive[decodedTocHref] else {
+            return []
+        }
+
+        var tocData = Data()
+        do {
+            _ = try archive.extract(tocEntry) { chunk in
+                tocData.append(chunk)
+            }
+        } catch {
+            return []
+        }
+
+        guard let tocXML = String(data: tocData, encoding: .utf8) else {
+            return []
+        }
+
+        switch opfResult.tocType {
+        case .nav:
+            return parseNavTOC(xml: tocXML, basePath: opfResult.basePath, spineWordPositions: spineWordPositions)
+        case .ncx:
+            return parseNCXTOC(xml: tocXML, basePath: opfResult.basePath, spineWordPositions: spineWordPositions)
+        case .none:
+            return []
+        }
+    }
+
+    private func parseNavTOC(xml: String, basePath: String, spineWordPositions: [String: Int]) -> [Chapter] {
+        do {
+            let doc = try SwiftSoup.parse(xml)
+
+            // Find the nav element with epub:type="toc" or just the first nav with ol
+            let navElements = try doc.select("nav")
+            var tocNav: Element?
+
+            for nav in navElements {
+                let epubType = try nav.attr("epub:type")
+                if epubType.contains("toc") {
+                    tocNav = nav
+                    break
+                }
+            }
+
+            // Fallback to first nav with ordered list
+            if tocNav == nil {
+                tocNav = navElements.first()
+            }
+
+            guard let nav = tocNav,
+                  let ol = try nav.select("ol").first() else {
+                return []
+            }
+
+            return parseNavOL(ol: ol, basePath: basePath, spineWordPositions: spineWordPositions)
+        } catch {
+            return []
+        }
+    }
+
+    private func parseNavOL(ol: Element, basePath: String, spineWordPositions: [String: Int]) -> [Chapter] {
+        var chapters: [Chapter] = []
+
+        do {
+            let listItems = ol.children().filter { $0.tagName() == "li" }
+
+            for li in listItems {
+                guard let anchor = try li.select("a").first() else { continue }
+
+                let title = try anchor.text().trimmingCharacters(in: .whitespacesAndNewlines)
+                let href = try anchor.attr("href")
+
+                guard !title.isEmpty else { continue }
+
+                // Resolve href to find word position
+                let wordIndex = resolveHrefToWordIndex(href: href, basePath: basePath, spineWordPositions: spineWordPositions)
+
+                // Check for nested ol (subsections)
+                var children: [Chapter] = []
+                if let nestedOL = try li.select("> ol").first() {
+                    children = parseNavOL(ol: nestedOL, basePath: basePath, spineWordPositions: spineWordPositions)
+                }
+
+                let chapter = Chapter(
+                    title: title,
+                    startWordIndex: wordIndex,
+                    children: children
+                )
+                chapters.append(chapter)
+            }
+        } catch {
+            // Ignore parsing errors for individual items
+        }
+
+        return chapters
+    }
+
+    private func parseNCXTOC(xml: String, basePath: String, spineWordPositions: [String: Int]) -> [Chapter] {
+        do {
+            let doc = try SwiftSoup.parse(xml, "", Parser.xmlParser())
+
+            guard let navMap = try doc.select("navMap").first() else {
+                return []
+            }
+
+            return parseNavPoints(parent: navMap, basePath: basePath, spineWordPositions: spineWordPositions)
+        } catch {
+            return []
+        }
+    }
+
+    private func parseNavPoints(parent: Element, basePath: String, spineWordPositions: [String: Int]) -> [Chapter] {
+        var chapters: [Chapter] = []
+
+        do {
+            let navPoints = parent.children().filter { $0.tagName() == "navpoint" }
+
+            for navPoint in navPoints {
+                let title = try navPoint.select("navlabel text").first()?.text() ?? ""
+                let href = try navPoint.select("content").first()?.attr("src") ?? ""
+
+                guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { continue }
+
+                let wordIndex = resolveHrefToWordIndex(href: href, basePath: basePath, spineWordPositions: spineWordPositions)
+
+                // Parse nested navPoints
+                let children = parseNavPoints(parent: navPoint, basePath: basePath, spineWordPositions: spineWordPositions)
+
+                let chapter = Chapter(
+                    title: title.trimmingCharacters(in: .whitespacesAndNewlines),
+                    startWordIndex: wordIndex,
+                    children: children
+                )
+                chapters.append(chapter)
+            }
+        } catch {
+            // Ignore parsing errors
+        }
+
+        return chapters
+    }
+
+    private func resolveHrefToWordIndex(href: String, basePath: String, spineWordPositions: [String: Int]) -> Int {
+        let decodedHref = href.removingPercentEncoding ?? href
+
+        // Remove fragment identifier
+        let baseHref = decodedHref.components(separatedBy: "#").first ?? decodedHref
+
+        // Try direct match
+        if let position = spineWordPositions[baseHref] {
+            return position
+        }
+
+        // Try with base path
+        let fullPath = basePath.isEmpty ? baseHref : "\(basePath)/\(baseHref)"
+        if let position = spineWordPositions[fullPath] {
+            return position
+        }
+
+        // Try matching just the filename
+        let filename = (baseHref as NSString).lastPathComponent
+        for (key, position) in spineWordPositions {
+            if (key as NSString).lastPathComponent == filename {
+                return position
+            }
+        }
+
+        // Return 0 if we can't resolve
+        return 0
+    }
+
+    // MARK: - Cover Extraction
 
     private func extractCover(archive: Archive, metadata: EPUBMetadata, basePath: String) throws -> Data? {
         guard let coverHref = metadata.coverHref else { return nil }
@@ -269,6 +516,8 @@ struct EPUBParser: DocumentParser {
     }
 }
 
+// MARK: - Private Types
+
 private struct EPUBMetadata {
     let title: String?
     let author: String?
@@ -280,9 +529,25 @@ private struct ManifestItem {
     let id: String
     let href: String
     let mediaType: String
+    let properties: String
 }
 
 private struct SpineItem {
     let id: String
     let href: String
+}
+
+private enum TOCType {
+    case ncx      // EPUB2
+    case nav      // EPUB3
+    case none
+}
+
+private struct OPFResult {
+    let metadata: EPUBMetadata
+    let manifest: [String: ManifestItem]
+    let spine: [SpineItem]
+    let basePath: String
+    let tocHref: String?
+    let tocType: TOCType
 }

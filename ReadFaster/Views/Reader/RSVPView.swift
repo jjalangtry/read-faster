@@ -9,8 +9,18 @@ struct RSVPView: View {
 
     @StateObject private var engine = RSVPEngine()
     @State private var showingBookmarks = false
+    @State private var showingChapters = false
     @State private var showingSettings = false
     @Namespace private var controlsNamespace
+    
+    // Platform-adaptive button sizes (larger on macOS for better click targets)
+    #if os(macOS)
+    private let controlButtonSize: CGFloat = 56
+    private let playButtonSize: CGFloat = 72
+    #else
+    private let controlButtonSize: CGFloat = 52
+    private let playButtonSize: CGFloat = 68
+    #endif
 
     var body: some View {
         GeometryReader { geometry in
@@ -58,6 +68,14 @@ struct RSVPView: View {
                         Image(systemName: "list.bullet")
                     }
 
+                    if book.hasChapters {
+                        Button {
+                            showingChapters = true
+                        } label: {
+                            Image(systemName: "list.bullet.indent")
+                        }
+                    }
+
                     Button {
                         showingSettings = true
                     } label: {
@@ -68,6 +86,10 @@ struct RSVPView: View {
         }
         .sheet(isPresented: $showingBookmarks) {
             BookmarksSheet(book: book, engine: engine)
+                .presentationDetents([.medium, .large])
+        }
+        .sheet(isPresented: $showingChapters) {
+            ChaptersSheet(book: book, engine: engine)
                 .presentationDetents([.medium, .large])
         }
         .sheet(isPresented: $showingSettings) {
@@ -93,22 +115,49 @@ struct RSVPView: View {
 
     @ViewBuilder
     private func wordDisplayArea(geometry: GeometryProxy) -> some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 0) {
+            // Main RSVP word - always in the same position
             WordDisplay(word: engine.currentWord)
                 .frame(maxWidth: min(geometry.size.width * 0.9, 600))
                 .contentShape(Rectangle())
                 .onTapGesture {
                     engine.toggle()
                 }
-
+            
+            // Fixed-height spacer for sentence context
+            // This ensures the word display stays in place regardless of context visibility
+            Group {
+                if engine.showSentenceContext && !engine.currentSentenceWords.isEmpty {
+                    SentenceContextView(
+                        words: engine.currentSentenceWords,
+                        currentWordIndex: engine.currentWordIndexInSentence
+                    )
+                    .frame(maxWidth: min(geometry.size.width * 0.95, 650))
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
+                    .padding(.top, 24)
+                } else {
+                    // Reserve space even when hidden to prevent layout shift
+                    Color.clear
+                        .frame(height: 96)
+                }
+            }
+            .frame(height: 96)
+            
+            // Status text
             Text(statusText)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.tertiary)
+                .padding(.top, 8)
         }
     }
 
     private var floatingControls: some View {
         VStack(spacing: 16) {
+            // Reading mode selector
+            ReadingModeSelector(currentMode: engine.currentMode) { mode in
+                engine.applyMode(mode)
+            }
+
             // Progress bar
             ProgressSlider(
                 value: Binding(
@@ -118,62 +167,36 @@ struct RSVPView: View {
                 isPlaying: engine.isPlaying
             )
 
-            // Playback controls with Liquid Glass
-            GlassEffectContainer {
-                HStack(spacing: 24) {
-                    // Skip backward
-                    Button {
-                        engine.previousSentence()
-                    } label: {
-                        Image(systemName: "backward.end.fill")
-                            .font(.title3)
-                            .frame(width: 44, height: 44)
-                    }
-                    .glassEffect(.regular.interactive())
-                    .disabled(!engine.hasContent)
-
-                    Button {
-                        engine.skipBackward()
-                    } label: {
-                        Image(systemName: "gobackward.10")
-                            .font(.title3)
-                            .frame(width: 44, height: 44)
-                    }
-                    .glassEffect(.regular.interactive())
-                    .disabled(engine.isAtStart)
-
-                    // Play/Pause - larger, prominent
-                    Button {
-                        engine.toggle()
-                    } label: {
-                        Image(systemName: engine.isPlaying ? "pause.fill" : "play.fill")
-                            .font(.title)
-                            .frame(width: 64, height: 64)
-                    }
-                    .glassEffect(.regular.tint(.accentColor).interactive())
-                    .disabled(!engine.hasContent)
-
-                    Button {
-                        engine.skipForward()
-                    } label: {
-                        Image(systemName: "goforward.10")
-                            .font(.title3)
-                            .frame(width: 44, height: 44)
-                    }
-                    .glassEffect(.regular.interactive())
-                    .disabled(engine.isAtEnd)
-
-                    // Skip forward
-                    Button {
-                        engine.nextSentence()
-                    } label: {
-                        Image(systemName: "forward.end.fill")
-                            .font(.title3)
-                            .frame(width: 44, height: 44)
-                    }
-                    .glassEffect(.regular.interactive())
-                    .disabled(!engine.hasContent)
-                }
+            // Playback controls - streamlined 3-button layout
+            HStack(spacing: 20) {
+                // Back: tap = previous sentence, hold = continuous rewind
+                HoldableButton(
+                    icon: "backward.fill",
+                    onTap: { engine.previousSentence() },
+                    onHoldTick: { engine.previousSentence() },
+                    disabled: !engine.hasContent || engine.isAtStart,
+                    size: controlButtonSize
+                )
+                
+                // Play/Pause - larger, prominent
+                HoldableButton(
+                    icon: engine.isPlaying ? "pause.fill" : "play.fill",
+                    onTap: { engine.toggle() },
+                    onHoldTick: { }, // No hold action for play/pause
+                    disabled: !engine.hasContent,
+                    size: playButtonSize,
+                    iconFont: .title,
+                    accentedBackground: true
+                )
+                
+                // Forward: tap = next sentence, hold = continuous forward
+                HoldableButton(
+                    icon: "forward.fill",
+                    onTap: { engine.nextSentence() },
+                    onHoldTick: { engine.nextSentence() },
+                    disabled: engine.isAtEnd,
+                    size: controlButtonSize
+                )
             }
 
             // WPM control with glass
@@ -236,66 +259,278 @@ struct WPMControl: View {
     @Binding var wpm: Int
     @State private var isExpanded = false
     @State private var sliderValue: Double = 300
+    
+    // Hold-to-repeat state
+    @State private var decreaseTimer: Timer?
+    @State private var increaseTimer: Timer?
+    @State private var tickCount = 0
+    @State private var isDecreasePressed = false
+    @State private var isIncreasePressed = false
+
+    private let step = 25 // Smaller step for smoother control
+    private let holdDelay: TimeInterval = 0.25
+    private let initialTickInterval: TimeInterval = 0.12
+    private let minimumTickInterval: TimeInterval = 0.04
 
     var body: some View {
-        if isExpanded {
-            // Expanded slider view - simpler, no glass container to avoid performance issues
-            HStack(spacing: 12) {
-                Text("\(RSVPEngine.minWPM)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                Slider(
-                    value: $sliderValue,
-                    in: Double(RSVPEngine.minWPM)...Double(RSVPEngine.maxWPM),
-                    step: 50,
-                    onEditingChanged: { editing in
-                        if !editing {
-                            // Only update engine when user releases slider
-                            wpm = Int(sliderValue)
+        HStack(spacing: 0) {
+            if isExpanded {
+                // Expanded slider view
+                HStack(spacing: 12) {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            isExpanded = false
                         }
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 32, height: 32)
                     }
-                )
-                .frame(width: 200)
+                    .buttonStyle(.plain)
 
-                Text("\(Int(sliderValue))")
-                    .font(.caption)
-                    .monospacedDigit()
-                    .frame(width: 40)
-
-                Button {
-                    wpm = Int(sliderValue)
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        isExpanded = false
+                    Slider(
+                        value: $sliderValue,
+                        in: Double(RSVPEngine.minWPM)...Double(RSVPEngine.maxWPM),
+                        step: Double(step)
+                    )
+                    .frame(minWidth: 120, maxWidth: 200)
+                    .onChange(of: sliderValue) { _, newValue in
+                        wpm = Int(newValue)
                     }
-                } label: {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.title2)
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 14)
-            .background(.regularMaterial, in: Capsule())
-        } else {
-            // Collapsed button
-            Button {
-                sliderValue = Double(wpm)
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    isExpanded = true
-                }
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "speedometer")
-                    Text("\(wpm) WPM")
+
+                    Text("\(Int(sliderValue))")
+                        .font(.subheadline.weight(.semibold))
                         .monospacedDigit()
+                        .frame(width: 44)
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
+                .background(.regularMaterial, in: Capsule())
+            } else {
+                // Compact stepper view with hold-to-repeat
+                HStack(spacing: 4) {
+                    // Decrease button - holdable
+                    wpmButton(
+                        icon: "minus",
+                        isPressed: $isDecreasePressed,
+                        disabled: wpm <= RSVPEngine.minWPM,
+                        onTap: { decreaseWPM() },
+                        onHoldStart: { startDecreaseTimer() },
+                        onHoldEnd: { stopDecreaseTimer() }
+                    )
+
+                    // WPM display - tap to expand slider
+                    Button {
+                        sliderValue = Double(wpm)
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            isExpanded = true
+                        }
+                    } label: {
+                        VStack(spacing: 2) {
+                            Text("\(wpm)")
+                                .font(.headline)
+                                .monospacedDigit()
+                            Text("WPM")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        .frame(width: 56)
+                    }
+                    .buttonStyle(.plain)
+
+                    // Increase button - holdable
+                    wpmButton(
+                        icon: "plus",
+                        isPressed: $isIncreasePressed,
+                        disabled: wpm >= RSVPEngine.maxWPM,
+                        onTap: { increaseWPM() },
+                        onHoldStart: { startIncreaseTimer() },
+                        onHoldEnd: { stopIncreaseTimer() }
+                    )
+                }
             }
-            .buttonStyle(.plain)
-            .background(.regularMaterial, in: Capsule())
         }
+        .animation(.easeInOut(duration: 0.2), value: isExpanded)
+    }
+    
+    @ViewBuilder
+    private func wpmButton(
+        icon: String,
+        isPressed: Binding<Bool>,
+        disabled: Bool,
+        onTap: @escaping () -> Void,
+        onHoldStart: @escaping () -> Void,
+        onHoldEnd: @escaping () -> Void
+    ) -> some View {
+        Image(systemName: icon)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(disabled ? .tertiary : .primary)
+            .frame(width: 44, height: 44)
+            .contentShape(Circle())
+            .scaleEffect(isPressed.wrappedValue ? 0.9 : 1.0)
+            .animation(.easeOut(duration: 0.1), value: isPressed.wrappedValue)
+            .background {
+                Circle()
+                    .fill(.clear)
+                    .glassEffect(.regular.interactive(), in: Circle())
+            }
+            .opacity(disabled ? 0.5 : 1.0)
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { _ in
+                        guard !disabled, !isPressed.wrappedValue else { return }
+                        isPressed.wrappedValue = true
+                        onHoldStart()
+                    }
+                    .onEnded { _ in
+                        let wasHolding = tickCount > 0
+                        onHoldEnd()
+                        isPressed.wrappedValue = false
+                        
+                        if !wasHolding && !disabled {
+                            onTap()
+                        }
+                    }
+            )
+            .allowsHitTesting(!disabled)
+    }
+    
+    private func decreaseWPM() {
+        let newValue = max(RSVPEngine.minWPM, wpm - step)
+        wpm = newValue
+        sliderValue = Double(newValue)
+    }
+    
+    private func increaseWPM() {
+        let newValue = min(RSVPEngine.maxWPM, wpm + step)
+        wpm = newValue
+        sliderValue = Double(newValue)
+    }
+    
+    private func startDecreaseTimer() {
+        tickCount = 0
+        decreaseTimer = Timer.scheduledTimer(withTimeInterval: holdDelay, repeats: false) { _ in
+            Task { @MainActor in
+                guard isDecreasePressed else { return }
+                tickCount += 1
+                decreaseWPM()
+                continueDecreaseTimer()
+            }
+        }
+    }
+    
+    private func continueDecreaseTimer() {
+        let interval = currentTickInterval
+        decreaseTimer?.invalidate()
+        decreaseTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { _ in
+            Task { @MainActor in
+                guard isDecreasePressed, wpm > RSVPEngine.minWPM else { return }
+                tickCount += 1
+                decreaseWPM()
+                continueDecreaseTimer()
+            }
+        }
+    }
+    
+    private func stopDecreaseTimer() {
+        decreaseTimer?.invalidate()
+        decreaseTimer = nil
+        tickCount = 0
+    }
+    
+    private func startIncreaseTimer() {
+        tickCount = 0
+        increaseTimer = Timer.scheduledTimer(withTimeInterval: holdDelay, repeats: false) { _ in
+            Task { @MainActor in
+                guard isIncreasePressed else { return }
+                tickCount += 1
+                increaseWPM()
+                continueIncreaseTimer()
+            }
+        }
+    }
+    
+    private func continueIncreaseTimer() {
+        let interval = currentTickInterval
+        increaseTimer?.invalidate()
+        increaseTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { _ in
+            Task { @MainActor in
+                guard isIncreasePressed, wpm < RSVPEngine.maxWPM else { return }
+                tickCount += 1
+                increaseWPM()
+                continueIncreaseTimer()
+            }
+        }
+    }
+    
+    private func stopIncreaseTimer() {
+        increaseTimer?.invalidate()
+        increaseTimer = nil
+        tickCount = 0
+    }
+    
+    private var currentTickInterval: TimeInterval {
+        if tickCount < 5 {
+            return initialTickInterval
+        } else {
+            let acceleration = Double(tickCount - 5) * 0.015
+            return max(minimumTickInterval, initialTickInterval - acceleration)
+        }
+    }
+}
+
+// MARK: - Reading Mode Selector
+
+struct ReadingModeSelector: View {
+    let currentMode: ReadingMode
+    let onModeChange: (ReadingMode) -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ForEach(ReadingMode.allCases) { mode in
+                ModeButton(
+                    mode: mode,
+                    isSelected: mode == currentMode,
+                    action: { onModeChange(mode) }
+                )
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(.regularMaterial, in: Capsule())
+    }
+}
+
+struct ModeButton: View {
+    let mode: ReadingMode
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: mode.icon)
+                    .font(.subheadline)
+
+                if isSelected {
+                    Text(mode.displayName)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                }
+            }
+            .foregroundStyle(isSelected ? .primary : .secondary)
+            .padding(.horizontal, isSelected ? 12 : 8)
+            .padding(.vertical, 8)
+            .background {
+                if isSelected {
+                    Capsule()
+                        .fill(Color.accentColor.opacity(0.2))
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .animation(.easeInOut(duration: 0.2), value: isSelected)
     }
 }
 

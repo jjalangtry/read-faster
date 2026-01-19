@@ -19,6 +19,7 @@ final class Book {
     var lastOpened: Date?
     var totalWords: Int
     @Attribute(.externalStorage) var content: String
+    @Attribute(.externalStorage) var chaptersData: Data?
 
     @Relationship(deleteRule: .cascade, inverse: \ReadingProgress.book)
     var progress: ReadingProgress?
@@ -34,7 +35,8 @@ final class Book {
         fileType: FileType,
         coverImage: Data? = nil,
         content: String,
-        totalWords: Int
+        totalWords: Int,
+        chapters: [Chapter] = []
     ) {
         self.id = id
         self.title = title
@@ -46,6 +48,19 @@ final class Book {
         self.lastOpened = nil
         self.totalWords = totalWords
         self.content = content
+        self.chaptersData = chapters.encoded()
+    }
+
+    /// Decoded chapters from stored JSON data
+    var chapters: [Chapter] {
+        guard let data = chaptersData, !data.isEmpty else { return [] }
+        return [Chapter].decoded(from: data) ?? []
+    }
+
+    /// Whether this book has chapter navigation available
+    var hasChapters: Bool {
+        guard let data = chaptersData, !data.isEmpty else { return false }
+        return true
     }
 
     var words: [String] {
