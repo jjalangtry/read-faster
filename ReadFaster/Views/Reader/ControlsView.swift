@@ -107,46 +107,80 @@ struct WPMSlider: View {
 struct ProgressSlider: View {
     @Binding var value: Double
     let isPlaying: Bool
+    var leadingLabel: String = ""
+    var trailingLabel: String = ""
 
     @State private var isDragging = false
 
     var body: some View {
-        GeometryReader { geometry in
-            ZStack(alignment: .leading) {
-                // Track
-                Capsule()
-                    .fill(Color.secondary.opacity(0.2))
-                    .frame(height: 6)
+        VStack(spacing: 7) {
+            GeometryReader { geometry in
+                let clampedValue = min(max(value, 0), 1)
+                let width = max(1, geometry.size.width)
+                let fillWidth = max(10, width * clampedValue)
+                let thumbOffset = max(0, min(width - 18, (width - 18) * clampedValue))
 
-                // Fill
-                Capsule()
-                    .fill(Color.accentColor)
-                    .frame(width: max(6, geometry.size.width * value), height: 6)
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(.white.opacity(0.18))
+                        .frame(height: 8)
 
-                // Thumb (visible when dragging or paused)
-                if isDragging || !isPlaying {
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.accentColor.opacity(0.58), Color.accentColor],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .frame(width: fillWidth, height: 8)
+
                     Circle()
-                        .fill(Color.accentColor)
-                        .frame(width: 20, height: 20)
-                        .shadow(color: .accentColor.opacity(0.3), radius: 4)
-                        .offset(x: max(0, min(geometry.size.width - 20, (geometry.size.width - 20) * value)))
+                        .fill(.white.opacity(0.96))
+                        .frame(
+                            width: (isDragging || !isPlaying) ? 18 : 15,
+                            height: (isDragging || !isPlaying) ? 18 : 15
+                        )
+                        .overlay {
+                            Circle()
+                                .strokeBorder(.white.opacity(0.5), lineWidth: 1)
+                        }
+                        .shadow(color: .black.opacity(0.18), radius: 5, y: 1)
+                        .offset(x: thumbOffset)
                 }
+                .animation(.spring(response: 0.2, dampingFraction: 0.82), value: clampedValue)
+                .frame(height: 24)
+                .contentShape(Rectangle())
+                .gesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { gesture in
+                            isDragging = true
+                            let newValue = gesture.location.x / width
+                            value = min(max(newValue, 0), 1)
+                        }
+                        .onEnded { _ in
+                            isDragging = false
+                        }
+                )
             }
             .frame(height: 24)
-            .contentShape(Rectangle())
-            .gesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { gesture in
-                        isDragging = true
-                        let newValue = gesture.location.x / geometry.size.width
-                        value = min(max(newValue, 0), 1)
-                    }
-                    .onEnded { _ in
-                        isDragging = false
-                    }
-            )
+
+            if !leadingLabel.isEmpty || !trailingLabel.isEmpty {
+                HStack {
+                    Text(leadingLabel)
+                        .font(AppFont.caption2)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+
+                    Spacer()
+
+                    Text(trailingLabel)
+                        .font(AppFont.caption2)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                }
+            }
         }
-        .frame(height: 24)
     }
 }
 

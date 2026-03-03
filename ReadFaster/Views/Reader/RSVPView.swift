@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 
+// swiftlint:disable type_body_length
 struct RSVPView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -208,6 +209,10 @@ struct RSVPView: View {
 
             // Status: word count and time remaining
             HStack(spacing: 8) {
+                if chapterContext.title != "Whole Book" {
+                    statusChip(text: chapterContext.title, systemImage: "book.closed")
+                }
+
                 statusChip(text: statusText, systemImage: "textformat.123")
 
                 if let timeRemaining = timeRemainingText {
@@ -220,23 +225,23 @@ struct RSVPView: View {
 
     private var floatingControls: some View {
         VStack(spacing: 16) {
-            // Reading mode selector
+            nowPlayingHeader
+
             ReadingModeSelector(currentMode: engine.currentMode) { mode in
                 engine.applyMode(mode)
             }
 
-            // Progress bar
             ProgressSlider(
                 value: Binding(
-                    get: { engine.displayedProgress },
-                    set: { engine.seekToProgress($0) }
+                    get: { chapterProgress },
+                    set: { seekWithinCurrentChapter(to: $0) }
                 ),
-                isPlaying: engine.isPlaying
+                isPlaying: engine.isPlaying,
+                leadingLabel: chapterElapsedLabel,
+                trailingLabel: chapterRemainingLabel
             )
 
-            // Playback controls - streamlined 3-button layout
             HStack(spacing: 20) {
-                // Back: tap = previous sentence, hold = continuous rewind
                 HoldableButton(
                     icon: "backward.fill",
                     onTap: { engine.previousSentence() },
@@ -266,8 +271,193 @@ struct RSVPView: View {
                 )
             }
 
-            // WPM control with glass
             WPMControl(wpm: $engine.wordsPerMinute)
+        }
+        .padding(.horizontal, 18)
+        .padding(.top, 14)
+        .padding(.bottom, 16)
+        .background {
+            RoundedRectangle(cornerRadius: 30, style: .continuous)
+                .fill(.clear)
+                .glassEffect(
+                    .regular.tint(Color.white.opacity(0.08)),
+                    in: RoundedRectangle(cornerRadius: 30, style: .continuous)
+                )
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 30, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.16), lineWidth: 1)
+        }
+        .shadow(color: .black.opacity(0.14), radius: 22, y: 10)
+    }
+
+    private var nowPlayingHeader: some View {
+        HStack(spacing: 12) {
+            nowPlayingArtwork
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(chapterContext.title)
+                    .font(AppFont.semibold(size: 17))
+                    .lineLimit(1)
+
+                Text(nowPlayingSubtitle)
+                    .font(AppFont.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 8)
+
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(chapterProgressPercentText)
+                    .font(AppFont.semibold(size: 13))
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+
+                Text(chapterWordPositionText)
+                    .font(AppFont.caption2)
+                    .foregroundStyle(.tertiary)
+                    .monospacedDigit()
+            }
+        }
+    }
+
+    private var nowPlayingArtwork: some View {
+        RoundedRectangle(cornerRadius: 12, style: .continuous)
+            .fill(
+                LinearGradient(
+                    colors: [
+                        Color.accentColor.opacity(0.78),
+                        Color.accentColor.opacity(0.52)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .overlay {
+                Image(systemName: "text.book.closed.fill")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.92))
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .strokeBorder(.white.opacity(0.28), lineWidth: 1)
+            }
+            .frame(width: 50, height: 50)
+    }
+
+    private var nowPlayingSubtitle: String {
+        if let author = book.author, !author.isEmpty {
+            return "\(book.title) - \(author)"
+        }
+        return book.title
+    }
+
+    private var orderedChapters: [Chapter] {
+        book.chapters.flattened.sorted { lhs, rhs in
+            if lhs.startWordIndex == rhs.startWordIndex {
+                return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
+            }
+            return lhs.startWordIndex < rhs.startWordIndex
+        }
+    }
+
+    private var chapterContext: ChapterPlaybackContext {
+        let total = engine.totalWords
+        guard total > 0 else {
+            return ChapterPlaybackContext(title: "Whole Book", startWordIndex: 0, endWordIndexExclusive: 1)
+        }
+
+        guard let chapter = book.chapters.currentChapter(for: engine.currentIndex) else {
+            return ChapterPlaybackContext(
+                title: "Whole Book",
+                startWordIndex: 0,
+                endWordIndexExclusive: total
+            )
+        }
+
+        let start = min(max(chapter.startWordIndex, 0), max(0, total - 1))
+        let nextStart = orderedChapters
+            .map(\.startWordIndex)
+            .first(where: { $0 > start }) ?? total
+        let end = max(start + 1, min(total, nextStart))
+        let title = chapter.title.isEmpty ? "Current Chapter" : chapter.title
+
+        return ChapterPlaybackContext(title: title, startWordIndex: start, endWordIndexExclusive: end)
+    }
+
+    private var chapterConsumedWords: Int {
+        let context = chapterContext
+        let localConsumed = (engine.currentIndex - context.startWordIndex) + engine.currentDisplayWordCount
+        return min(context.wordCount, max(0, localConsumed))
+    }
+
+    private var chapterRemainingWords: Int {
+        max(0, chapterContext.wordCount - chapterConsumedWords)
+    }
+
+    private var chapterProgress: Double {
+        guard chapterContext.wordCount > 0 else { return 0 }
+        return Double(chapterConsumedWords) / Double(chapterContext.wordCount)
+    }
+
+    private var chapterProgressPercentText: String {
+        let percent = min(100, max(0, Int(chapterProgress * 100)))
+        return "\(percent)%"
+    }
+
+    private var chapterWordPositionText: String {
+        let displayStart = min(max(chapterConsumedWords, 1), chapterContext.wordCount)
+        return "\(displayStart)/\(chapterContext.wordCount)"
+    }
+
+    private var chapterElapsedLabel: String {
+        formattedDuration(forWordCount: chapterConsumedWords)
+    }
+
+    private var chapterRemainingLabel: String {
+        "-" + formattedDuration(forWordCount: chapterRemainingWords)
+    }
+
+    private func seekWithinCurrentChapter(to progress: Double) {
+        guard engine.totalWords > 0 else { return }
+        let context = chapterContext
+        let clampedProgress = min(max(progress, 0), 1)
+        let maxOffset = max(0, context.wordCount - 1)
+        let offset = Int((Double(maxOffset) * clampedProgress).rounded(.toNearestOrAwayFromZero))
+        let targetIndex = min(context.endWordIndexExclusive - 1, context.startWordIndex + offset)
+        engine.seek(to: targetIndex)
+    }
+
+    private func formattedDuration(forWordCount wordCount: Int) -> String {
+        guard engine.wordsPerMinute > 0 else { return "0:00" }
+        let totalSeconds = Int((Double(wordCount) / Double(engine.wordsPerMinute)) * 60.0)
+        return formattedDuration(seconds: totalSeconds)
+    }
+
+    private func formattedDuration(seconds: Int) -> String {
+        let clamped = max(0, seconds)
+        let hours = clamped / 3600
+        let minutes = (clamped % 3600) / 60
+        let secs = clamped % 60
+
+        if hours > 0 {
+            return "\(hours):\(twoDigit(minutes)):\(twoDigit(secs))"
+        }
+        return "\(minutes):\(twoDigit(secs))"
+    }
+
+    private func twoDigit(_ value: Int) -> String {
+        value < 10 ? "0\(value)" : "\(value)"
+    }
+
+    private struct ChapterPlaybackContext {
+        let title: String
+        let startWordIndex: Int
+        let endWordIndexExclusive: Int
+
+        var wordCount: Int {
+            max(1, endWordIndexExclusive - startWordIndex)
         }
     }
 
@@ -384,6 +574,7 @@ struct RSVPView: View {
             .background(.ultraThinMaterial, in: Capsule())
     }
 }
+// swiftlint:enable type_body_length
 
 struct WPMControl: View {
     @Binding var wpm: Int
@@ -628,7 +819,15 @@ struct ReadingModeSelector: View {
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
-        .background(.regularMaterial, in: Capsule())
+        .background {
+            Capsule()
+                .fill(.clear)
+                .glassEffect(.regular, in: Capsule())
+        }
+        .overlay {
+            Capsule()
+                .strokeBorder(.white.opacity(0.16), lineWidth: 1)
+        }
     }
 }
 
@@ -654,7 +853,7 @@ struct ModeButton: View {
             .background {
                 if isSelected {
                     Capsule()
-                        .fill(Color.accentColor.opacity(0.2))
+                        .fill(.white.opacity(0.22))
                 }
             }
         }
