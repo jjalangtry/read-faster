@@ -84,7 +84,7 @@ enum AppFont {
     // MARK: - RSVP Display
 
     static func rsvpWord(size: CGFloat) -> Font {
-        .system(size: size, weight: .light, design: .default)
+        .custom("AveriaSerifLibre-Regular", size: size)
     }
 
     /// Serif reserved for reading body text contexts.
