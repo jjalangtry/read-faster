@@ -1,180 +1,150 @@
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
+#if canImport(AppKit)
+import AppKit
+#endif
 
-/// Custom font definitions for the app using Monaspace Xenon
+/// Custom font definitions for the app.
+/// Primary UI font: system default
+/// Reading body serif: Averia Serif Libre
 enum AppFont {
-    static let familyName = "Monaspace Xenon"
-    
+    static let familyName = "System"
+    static let readingSerifFamilyName = "Averia Serif Libre"
+
     // MARK: - Font Weights
-    
+
     static func light(size: CGFloat) -> Font {
-        .custom("MonaspaceXenon-Light", size: size)
+        .system(size: size, weight: .light, design: .default)
     }
-    
+
     static func regular(size: CGFloat) -> Font {
-        .custom("MonaspaceXenon-Regular", size: size)
+        .system(size: size, weight: .regular, design: .default)
     }
-    
+
     static func medium(size: CGFloat) -> Font {
-        .custom("MonaspaceXenon-Medium", size: size)
+        .system(size: size, weight: .medium, design: .default)
     }
-    
+
     static func semibold(size: CGFloat) -> Font {
-        .custom("MonaspaceXenon-SemiBold", size: size)
+        .system(size: size, weight: .semibold, design: .default)
     }
-    
+
     static func bold(size: CGFloat) -> Font {
-        .custom("MonaspaceXenon-Bold", size: size)
+        .system(size: size, weight: .bold, design: .default)
     }
-    
+
     // MARK: - Semantic Styles (matching system text styles)
-    
+
     static var largeTitle: Font {
-        .custom("MonaspaceXenon-Bold", size: 34, relativeTo: .largeTitle)
+        .system(size: 34, weight: .bold, design: .default)
     }
-    
+
     static var title: Font {
-        .custom("MonaspaceXenon-SemiBold", size: 28, relativeTo: .title)
+        .system(size: 28, weight: .semibold, design: .default)
     }
-    
+
     static var title2: Font {
-        .custom("MonaspaceXenon-SemiBold", size: 22, relativeTo: .title2)
+        .system(size: 22, weight: .semibold, design: .default)
     }
-    
+
     static var title3: Font {
-        .custom("MonaspaceXenon-Medium", size: 20, relativeTo: .title3)
+        .system(size: 20, weight: .medium, design: .default)
     }
-    
+
     static var headline: Font {
-        .custom("MonaspaceXenon-SemiBold", size: 17, relativeTo: .headline)
+        .system(size: 17, weight: .semibold, design: .default)
     }
-    
+
     static var body: Font {
-        .custom("MonaspaceXenon-Regular", size: 17, relativeTo: .body)
+        .system(size: 17, weight: .regular, design: .default)
     }
-    
+
     static var callout: Font {
-        .custom("MonaspaceXenon-Regular", size: 16, relativeTo: .callout)
+        .system(size: 16, weight: .regular, design: .default)
     }
-    
+
     static var subheadline: Font {
-        .custom("MonaspaceXenon-Regular", size: 15, relativeTo: .subheadline)
+        .system(size: 15, weight: .regular, design: .default)
     }
-    
+
     static var footnote: Font {
-        .custom("MonaspaceXenon-Regular", size: 13, relativeTo: .footnote)
+        .system(size: 13, weight: .regular, design: .default)
     }
-    
+
     static var caption: Font {
-        .custom("MonaspaceXenon-Regular", size: 12, relativeTo: .caption)
+        .system(size: 12, weight: .regular, design: .default)
     }
-    
+
     static var caption2: Font {
-        .custom("MonaspaceXenon-Regular", size: 11, relativeTo: .caption2)
+        .system(size: 11, weight: .regular, design: .default)
     }
-    
+
     // MARK: - RSVP Display
-    
+
     static func rsvpWord(size: CGFloat) -> Font {
-        .custom("MonaspaceXenon-Light", size: size)
+        .system(size: size, weight: .light, design: .default)
     }
 
-    /// Serif styling for long-form reading context and phrase mode.
-    static func serif(size: CGFloat, weight: Font.Weight = .regular) -> Font {
-        .system(size: size, weight: weight, design: .serif)
-    }
-
+    /// Serif reserved for reading body text contexts.
     static func rsvpPhrase(size: CGFloat) -> Font {
-        .system(size: size, weight: .medium, design: .serif)
+        .custom("AveriaSerifLibre-Regular", size: size)
     }
-    
+
+    /// Serif reserved for reading body text contexts.
     static func contextWord(highlighted: Bool) -> Font {
         if highlighted {
-            return .system(size: 16, weight: .semibold, design: .serif)
+            return .custom("AveriaSerifLibre-Bold", size: 16)
         } else {
-            return .system(size: 16, weight: .regular, design: .serif)
+            return .custom("AveriaSerifLibre-Regular", size: 16)
         }
     }
-    
-    // MARK: - UIFont for UIKit components
-    
+
+    // MARK: - UIFont/NSFont helpers
+
     #if canImport(UIKit)
     static func uiFont(size: CGFloat, weight: UIFont.Weight = .regular) -> UIFont {
-        let fontName: String
-        switch weight {
-        case .light, .ultraLight, .thin:
-            fontName = "MonaspaceXenon-Light"
-        case .medium:
-            fontName = "MonaspaceXenon-Medium"
-        case .semibold:
-            fontName = "MonaspaceXenon-SemiBold"
-        case .bold, .heavy, .black:
-            fontName = "MonaspaceXenon-Bold"
-        default:
-            fontName = "MonaspaceXenon-Regular"
-        }
-        return UIFont(name: fontName, size: size) ?? UIFont.systemFont(ofSize: size, weight: weight)
+        UIFont.systemFont(ofSize: size, weight: weight)
     }
     #endif
-    
+
     #if canImport(AppKit)
     static func nsFont(size: CGFloat, weight: NSFont.Weight = .regular) -> NSFont {
-        let fontName: String
-        switch weight {
-        case .light, .ultraLight, .thin:
-            fontName = "MonaspaceXenon-Light"
-        case .medium:
-            fontName = "MonaspaceXenon-Medium"
-        case .semibold:
-            fontName = "MonaspaceXenon-SemiBold"
-        case .bold, .heavy, .black:
-            fontName = "MonaspaceXenon-Bold"
-        default:
-            fontName = "MonaspaceXenon-Regular"
-        }
-        return NSFont(name: fontName, size: size) ?? NSFont.systemFont(ofSize: size, weight: weight)
+        NSFont.systemFont(ofSize: size, weight: weight)
     }
     #endif
 }
 
 // MARK: - Global Font Modifier
 
-/// A view modifier that applies Monaspace Xenon as the default font throughout the view hierarchy
+/// Applies system typography defaults app-wide.
 struct AppFontModifier: ViewModifier {
     init() {
-        // Set UIKit appearance for navigation bars, etc.
         #if canImport(UIKit)
         let appearance = UINavigationBarAppearance()
         appearance.configureWithDefaultBackground()
-        
-        // Title font
-        if let titleFont = UIFont(name: "MonaspaceXenon-SemiBold", size: 17) {
-            appearance.titleTextAttributes = [.font: titleFont]
-        }
-        
-        // Large title font
-        if let largeTitleFont = UIFont(name: "MonaspaceXenon-Bold", size: 34) {
-            appearance.largeTitleTextAttributes = [.font: largeTitleFont]
-        }
-        
+        appearance.titleTextAttributes = [.font: UIFont.systemFont(ofSize: 17, weight: .semibold)]
+        appearance.largeTitleTextAttributes = [.font: UIFont.systemFont(ofSize: 34, weight: .bold)]
+
         UINavigationBar.appearance().standardAppearance = appearance
         UINavigationBar.appearance().compactAppearance = appearance
         UINavigationBar.appearance().scrollEdgeAppearance = appearance
-        
-        // Tab bar font
-        if let tabFont = UIFont(name: "MonaspaceXenon-Regular", size: 10) {
-            UITabBarItem.appearance().setTitleTextAttributes([.font: tabFont], for: .normal)
-        }
+
+        UITabBarItem.appearance().setTitleTextAttributes(
+            [.font: UIFont.systemFont(ofSize: 10, weight: .regular)],
+            for: .normal
+        )
         #endif
     }
-    
+
     func body(content: Content) -> some View {
-        content
-            .font(AppFont.body)
+        content.font(AppFont.body)
     }
 }
 
 extension View {
-    /// Applies the app's custom font (Monaspace Xenon) as the default font
+    /// Applies the app typography defaults.
     func appFont() -> some View {
         self.modifier(AppFontModifier())
     }
