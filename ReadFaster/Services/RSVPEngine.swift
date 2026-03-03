@@ -16,6 +16,18 @@ final class RSVPEngine: ObservableObject {
             // Don't restart timer on every change - it will pick up new speed on next word
         }
     }
+    @Published var wordsPerChunk: Int = 1 {
+        didSet {
+            let normalized = (wordsPerChunk >= 3) ? 3 : 1
+            if wordsPerChunk != normalized {
+                wordsPerChunk = normalized
+                return
+            }
+            if hasContent {
+                currentWord = displayTextForCurrentChunk()
+            }
+        }
+    }
 
     // MARK: - Configuration
     static let minWPM = 200
@@ -65,6 +77,17 @@ final class RSVPEngine: ObservableObject {
 
     private var baseInterval: TimeInterval {
         60.0 / Double(wordsPerMinute)
+    }
+
+    /// The currently visible range, based on `wordsPerChunk`.
+    private var currentChunkRange: Range<Int>? {
+        guard hasContent, currentIndex < totalWords else { return nil }
+        let end = min(totalWords, currentIndex + wordsPerChunk)
+        return currentIndex..<end
+    }
+
+    private var currentChunkWordCount: Int {
+        currentChunkRange?.count ?? 0
     }
 
     // MARK: - Sentence Context Properties
@@ -126,7 +149,7 @@ final class RSVPEngine: ObservableObject {
         computeDialogueState()
         computeWordComplexity()
         currentIndex = 0
-        currentWord = words.first ?? ""
+        currentWord = displayTextForCurrentChunk()
         isPlaying = false
     }
 
@@ -136,7 +159,7 @@ final class RSVPEngine: ObservableObject {
         computeDialogueState()
         computeWordComplexity()
         currentIndex = 0
-        currentWord = words.first ?? ""
+        currentWord = displayTextForCurrentChunk()
         isPlaying = false
     }
 
@@ -295,9 +318,15 @@ final class RSVPEngine: ObservableObject {
     }
 
     func seek(to index: Int) {
+        guard totalWords > 0 else {
+            currentIndex = 0
+            currentWord = ""
+            return
+        }
+
         let clampedIndex = min(max(index, 0), totalWords - 1)
         currentIndex = clampedIndex
-        currentWord = words[safe: clampedIndex] ?? ""
+        currentWord = displayTextForCurrentChunk()
 
         if isPlaying {
             timer?.invalidate()
@@ -388,11 +417,12 @@ final class RSVPEngine: ObservableObject {
     }
 
     private func advanceToNextWord() {
-        currentIndex += 1
-        wordsReadInSession += 1
+        let displayedCount = max(1, currentChunkWordCount)
+        currentIndex += displayedCount
+        wordsReadInSession += displayedCount
 
         if currentIndex < totalWords {
-            currentWord = words[currentIndex]
+            currentWord = displayTextForCurrentChunk()
             scheduleNextWord()
         } else {
             currentWord = ""
@@ -412,8 +442,13 @@ final class RSVPEngine: ObservableObject {
         }
 
         // Apply adaptive pacing based on complexity
-        if adaptivePacingEnabled && currentIndex < wordComplexityScores.count {
-            let complexity = wordComplexityScores[currentIndex]
+        if adaptivePacingEnabled, let range = currentChunkRange {
+            let complexity = range
+                .compactMap { index in
+                    guard index < wordComplexityScores.count else { return nil }
+                    return wordComplexityScores[index]
+                }
+                .max() ?? 0.0
             // Scale: complexity 0.0 = no change, complexity 1.0 = up to 2x slower based on intensity
             let slowdownFactor = 1.0 + (complexity * adaptivePacingIntensity)
             interval *= slowdownFactor
@@ -421,7 +456,7 @@ final class RSVPEngine: ObservableObject {
 
         // Apply punctuation pauses (these stack with adaptive pacing)
         if pauseOnPunctuation {
-            let word = currentWord
+            let word = chunkTerminalWord() ?? currentWord
             // Using Unicode escapes for curly quotes
             let quoteChars = "\"\'\u{201C}\u{201D}\u{2018}\u{2019}\u{00BB}\u{00AB})]}"
             let trimmedWord = word.trimmingCharacters(in: CharacterSet(charactersIn: quoteChars))
@@ -438,6 +473,16 @@ final class RSVPEngine: ObservableObject {
 
         // Cap maximum interval to prevent jarring pauses (max 4x base)
         return min(interval, baseInterval * 4.0)
+    }
+
+    private func displayTextForCurrentChunk() -> String {
+        guard let range = currentChunkRange else { return "" }
+        return words[range].joined(separator: " ")
+    }
+
+    private func chunkTerminalWord() -> String? {
+        guard let range = currentChunkRange, !range.isEmpty else { return nil }
+        return words[safe: range.upperBound - 1]
     }
     
     /// Returns the slowdown multiplier for ramp-up based on position in the ramp

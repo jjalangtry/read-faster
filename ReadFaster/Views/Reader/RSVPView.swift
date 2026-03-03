@@ -12,6 +12,10 @@ struct RSVPView: View {
     @State private var showingChapters = false
     @State private var showingSettings = false
     @Namespace private var controlsNamespace
+
+    @AppStorage("defaultWPM") private var defaultWPM: Int = 300
+    @AppStorage("pauseOnPunctuation") private var pauseOnPunctuation: Bool = true
+    @AppStorage("wordsPerChunk") private var wordsPerChunk: Int = 1
     
     // Platform-adaptive button sizes (larger on macOS for better click targets)
     #if os(macOS)
@@ -56,6 +60,13 @@ struct RSVPView: View {
             ToolbarItem(placement: .primaryAction) {
                 HStack(spacing: 8) {
                     Button {
+                        toggleChunkMode()
+                    } label: {
+                        Image(systemName: engine.wordsPerChunk == 3 ? "text.justify" : "text.justify.left")
+                    }
+                    .help(engine.wordsPerChunk == 3 ? "Switch to one-word mode" : "Switch to three-word mode")
+
+                    Button {
                         showingBookmarks = true
                     } label: {
                         Image(systemName: book.bookmarks.isEmpty ? "bookmark" : "bookmark.fill")
@@ -93,6 +104,22 @@ struct RSVPView: View {
         }
         .onAppear {
             setupEngine()
+        }
+        .onChange(of: wordsPerChunk) { _, newValue in
+            let normalized = normalizedChunkSize(newValue)
+            if wordsPerChunk != normalized {
+                wordsPerChunk = normalized
+            }
+            engine.wordsPerChunk = normalized
+        }
+        .onChange(of: engine.wordsPerChunk) { _, newValue in
+            let normalized = normalizedChunkSize(newValue)
+            if wordsPerChunk != normalized {
+                wordsPerChunk = normalized
+            }
+        }
+        .onChange(of: pauseOnPunctuation) { _, newValue in
+            engine.pauseOnPunctuation = newValue
         }
         .onDisappear {
             engine.pause()
@@ -138,6 +165,10 @@ struct RSVPView: View {
             engine.replayCurrentSentence()
             return .handled
         }
+        .onKeyPress("3") {
+            toggleChunkMode()
+            return .handled
+        }
         .focusable()
         #else
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in
@@ -148,41 +179,43 @@ struct RSVPView: View {
 
     @ViewBuilder
     private func wordDisplayArea(geometry: GeometryProxy) -> some View {
-        VStack(spacing: 0) {
+        VStack(spacing: 12) {
             // Sentence context - dynamic height, clipped to bounds
             if engine.showSentenceContext && !engine.currentSentenceWords.isEmpty {
                 SentenceContextView(
                     words: engine.currentSentenceWords,
                     currentWordIndex: engine.currentWordIndexInSentence
                 )
-                .frame(maxWidth: min(geometry.size.width * 0.95, 600), maxHeight: 180)
-                .fixedSize(horizontal: false, vertical: true)
+                .frame(
+                    maxWidth: min(geometry.size.width * 0.95, 640),
+                    minHeight: 120,
+                    maxHeight: 120,
+                    alignment: .top
+                )
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
-                .padding(.bottom, 16)
             }
             
             // Main RSVP word - always in the same position
-            WordDisplay(word: engine.currentWord)
-                .frame(maxWidth: min(geometry.size.width * 0.9, 600))
+            WordDisplay(
+                word: engine.currentWord,
+                showsORPHighlight: engine.wordsPerChunk == 1
+            )
+                .frame(maxWidth: min(geometry.size.width * 0.92, 680))
                 .contentShape(Rectangle())
                 .onTapGesture {
                     engine.toggle()
                 }
 
             // Status: word count and time remaining
-            HStack(spacing: 16) {
-            Text(statusText)
-                    .font(AppFont.caption)
-                    .foregroundStyle(.tertiary)
-                
+            HStack(spacing: 8) {
+                statusChip(text: statusText, systemImage: "textformat.123")
+
                 if let timeRemaining = timeRemainingText {
-                    Text(timeRemaining)
-                        .font(AppFont.caption)
-                        .foregroundStyle(.tertiary)
+                    statusChip(text: timeRemaining, systemImage: "clock")
                 }
             }
-            .padding(.top, 16)
+            .padding(.top, 6)
         }
     }
 
@@ -192,6 +225,8 @@ struct RSVPView: View {
             ReadingModeSelector(currentMode: engine.currentMode) { mode in
                 engine.applyMode(mode)
             }
+
+            ChunkModeControl(wordsPerChunk: $engine.wordsPerChunk)
 
             // Progress bar
             ProgressSlider(
@@ -240,15 +275,23 @@ struct RSVPView: View {
     }
 
     private var statusText: String {
-        let current = engine.currentIndex + 1
         let total = engine.totalWords
-        let percent = Int(engine.progress * 100)
-        return "\(current) / \(total) (\(percent)%)"
+        guard total > 0 else { return "0 / 0" }
+
+        let start = min(max(engine.currentIndex + 1, 1), total)
+        let end = min(total, start + engine.wordsPerChunk - 1)
+        let percent = min(100, max(0, Int(engine.progress * 100)))
+
+        if end > start {
+            return "\(start)-\(end) / \(total) (\(percent)%)"
+        }
+
+        return "\(start) / \(total) (\(percent)%)"
     }
     
     /// Calculates time remaining based on current WPM and words left
     private var timeRemainingText: String? {
-        let wordsRemaining = engine.totalWords - engine.currentIndex
+        let wordsRemaining = max(0, engine.totalWords - engine.currentIndex)
         guard wordsRemaining > 0, engine.wordsPerMinute > 0 else { return nil }
         
         let minutesRemaining = Double(wordsRemaining) / Double(engine.wordsPerMinute)
@@ -268,6 +311,9 @@ struct RSVPView: View {
 
     private func setupEngine() {
         engine.load(words: book.words)
+        engine.wordsPerMinute = defaultWPM
+        engine.pauseOnPunctuation = pauseOnPunctuation
+        engine.wordsPerChunk = normalizedChunkSize(wordsPerChunk)
 
         // Resume from saved position
         if let progress = book.progress {
@@ -307,6 +353,27 @@ struct RSVPView: View {
             at: engine.currentIndex,
             highlightedText: context
         )
+    }
+
+    private func normalizedChunkSize(_ value: Int) -> Int {
+        value >= 3 ? 3 : 1
+    }
+
+    private func toggleChunkMode() {
+        let nextValue = engine.wordsPerChunk == 3 ? 1 : 3
+        wordsPerChunk = nextValue
+        engine.wordsPerChunk = nextValue
+    }
+
+    @ViewBuilder
+    private func statusChip(text: String, systemImage: String) -> some View {
+        Label(text, systemImage: systemImage)
+            .font(AppFont.caption)
+            .monospacedDigit()
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(.ultraThinMaterial, in: Capsule())
     }
 }
 
@@ -532,6 +599,28 @@ struct WPMControl: View {
             let acceleration = Double(tickCount - 5) * 0.015
             return max(minimumTickInterval, initialTickInterval - acceleration)
         }
+    }
+}
+
+struct ChunkModeControl: View {
+    @Binding var wordsPerChunk: Int
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Text("Display")
+                .font(AppFont.caption)
+                .foregroundStyle(.secondary)
+
+            Picker("Display", selection: $wordsPerChunk) {
+                Text("1 word").tag(1)
+                Text("3 words").tag(3)
+            }
+            .pickerStyle(.segmented)
+            .frame(maxWidth: 220)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(.regularMaterial, in: Capsule())
     }
 }
 

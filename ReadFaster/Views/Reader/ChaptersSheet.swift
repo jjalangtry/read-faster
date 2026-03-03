@@ -5,6 +5,15 @@ struct ChaptersSheet: View {
 
     let book: Book
     let engine: RSVPEngine
+    @State private var searchText = ""
+
+    private var filteredChapters: [Chapter] {
+        book.chapters.filtered(matching: searchText)
+    }
+
+    private var currentChapterID: UUID? {
+        book.chapters.currentChapter(for: engine.currentIndex)?.id
+    }
 
     var body: some View {
         NavigationStack {
@@ -15,11 +24,13 @@ struct ChaptersSheet: View {
                     } description: {
                         Text("This book doesn't have chapter information available.")
                     }
+                } else if filteredChapters.isEmpty {
+                    ContentUnavailableView.search(text: searchText)
                 } else {
                     List {
                         ChapterListContent(
-                            chapters: book.chapters,
-                            currentWordIndex: engine.currentIndex,
+                            chapters: filteredChapters,
+                            currentChapterID: currentChapterID,
                             totalWords: engine.totalWords,
                             onSelect: { chapter in
                                 engine.seek(to: chapter.startWordIndex)
@@ -36,6 +47,7 @@ struct ChaptersSheet: View {
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
+            .searchable(text: $searchText, prompt: "Find chapter")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Done") {
@@ -53,7 +65,7 @@ struct ChaptersSheet: View {
 /// Recursive chapter list content
 struct ChapterListContent: View {
     let chapters: [Chapter]
-    let currentWordIndex: Int
+    let currentChapterID: UUID?
     let totalWords: Int
     let onSelect: (Chapter) -> Void
     var indentLevel: Int = 0
@@ -62,7 +74,7 @@ struct ChapterListContent: View {
         ForEach(chapters) { chapter in
             ChapterRow(
                 chapter: chapter,
-                currentWordIndex: currentWordIndex,
+                isCurrentChapter: chapter.id == currentChapterID,
                 totalWords: totalWords,
                 indentLevel: indentLevel,
                 onSelect: onSelect
@@ -71,7 +83,7 @@ struct ChapterListContent: View {
             if chapter.hasChildren {
                 ChapterListContent(
                     chapters: chapter.children,
-                    currentWordIndex: currentWordIndex,
+                    currentChapterID: currentChapterID,
                     totalWords: totalWords,
                     onSelect: onSelect,
                     indentLevel: indentLevel + 1
@@ -83,16 +95,10 @@ struct ChapterListContent: View {
 
 struct ChapterRow: View {
     let chapter: Chapter
-    let currentWordIndex: Int
+    let isCurrentChapter: Bool
     let totalWords: Int
     let indentLevel: Int
     let onSelect: (Chapter) -> Void
-
-    private var isCurrentChapter: Bool {
-        // Check if this is the current chapter (current word is >= this chapter's start
-        // and < next chapter's start or end of book)
-        currentWordIndex >= chapter.startWordIndex
-    }
 
     private var progressPercent: Int {
         guard totalWords > 0 else { return 0 }

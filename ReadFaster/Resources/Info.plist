@@ -67,11 +67,10 @@
 	<false/>
 	<key>UIAppFonts</key>
 	<array>
-		<string>MonaspaceXenon-Regular.otf</string>
-		<string>MonaspaceXenon-Medium.otf</string>
-		<string>MonaspaceXenon-SemiBold.otf</string>
-		<string>MonaspaceXenon-Bold.otf</string>
-		<string>MonaspaceXenon-Light.otf</string>
+		<string>AveriaSerifLibre-Regular.ttf</string>
+		<string>AveriaSerifLibre-Bold.ttf</string>
+		<string>AveriaSerifLibre-Italic.ttf</string>
+		<string>AveriaSerifLibre-BoldItalic.ttf</string>
 	</array>
 	<key>UILaunchScreen</key>
 	<dict/>
