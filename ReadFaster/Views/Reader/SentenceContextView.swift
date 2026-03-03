@@ -44,6 +44,7 @@ struct SentenceContextView: View {
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 14)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .clipped()
         }
     }
@@ -54,8 +55,9 @@ struct SentenceContextView: View {
         let isPast = index < currentWordIndex
         
         Text(word)
-            .font(AppFont.regular(size: 16))
+            .font(AppFont.contextWord(highlighted: isCurrent))
             .foregroundStyle(wordColor(isCurrent: isCurrent, isPast: isPast))
+            .animation(.easeOut(duration: 0.12), value: currentWordIndex)
     }
     
     private func wordColor(isCurrent: Bool, isPast: Bool) -> Color {
@@ -93,14 +95,10 @@ struct ParagraphFlowLayout: Layout {
     
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
         let result = layout(proposal: proposal, subviews: subviews)
-        
-        // Center the content vertically within bounds
-        let contentHeight = result.size.height
-        let verticalOffset = max(0, (bounds.height - contentHeight) / 2)
-        
+
         for (index, position) in result.positions.enumerated() {
             subviews[index].place(
-                at: CGPoint(x: bounds.minX + position.x, y: bounds.minY + position.y + verticalOffset),
+                at: CGPoint(x: bounds.minX + position.x, y: bounds.minY + position.y),
                 proposal: ProposedViewSize(result.sizes[index])
             )
         }

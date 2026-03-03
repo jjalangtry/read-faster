@@ -77,12 +77,21 @@ enum AppFont {
     static func rsvpWord(size: CGFloat) -> Font {
         .custom("MonaspaceXenon-Light", size: size)
     }
+
+    /// Serif styling for long-form reading context and phrase mode.
+    static func serif(size: CGFloat, weight: Font.Weight = .regular) -> Font {
+        .system(size: size, weight: weight, design: .serif)
+    }
+
+    static func rsvpPhrase(size: CGFloat) -> Font {
+        .system(size: size, weight: .medium, design: .serif)
+    }
     
     static func contextWord(highlighted: Bool) -> Font {
         if highlighted {
-            return .custom("MonaspaceXenon-SemiBold", size: 15, relativeTo: .subheadline)
+            return .system(size: 16, weight: .semibold, design: .serif)
         } else {
-            return .custom("MonaspaceXenon-Regular", size: 15, relativeTo: .subheadline)
+            return .system(size: 16, weight: .regular, design: .serif)
         }
     }
     

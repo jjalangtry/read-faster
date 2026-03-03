@@ -6,6 +6,7 @@ struct ReaderSettingsSheet: View {
 
     @AppStorage("fontSize") private var fontSize: Double = 48
     @AppStorage("pauseOnPunctuation") private var pauseOnPunctuation: Bool = true
+    @AppStorage("wordsPerChunk") private var wordsPerChunk: Int = 1
 
     var body: some View {
         NavigationStack {
@@ -28,8 +29,16 @@ struct ReaderSettingsSheet: View {
             .onChange(of: pauseOnPunctuation) { _, newValue in
                 engine.pauseOnPunctuation = newValue
             }
+            .onChange(of: wordsPerChunk) { _, newValue in
+                let normalized = normalizedChunkSize(newValue)
+                if wordsPerChunk != normalized {
+                    wordsPerChunk = normalized
+                }
+                engine.wordsPerChunk = normalized
+            }
             .onAppear {
                 engine.pauseOnPunctuation = pauseOnPunctuation
+                engine.wordsPerChunk = normalizedChunkSize(wordsPerChunk)
             }
         }
         #if os(macOS)
@@ -44,13 +53,30 @@ struct ReaderSettingsSheet: View {
                 Slider(value: $fontSize, in: 24...72, step: 2)
             }
 
-            HStack {
-                Spacer()
-                Text("Sample")
-                    .font(.system(size: fontSize, weight: .medium, design: .monospaced))
-                Spacer()
+            Picker("Reading Pulse", selection: $wordsPerChunk) {
+                Text("1 word").tag(1)
+                Text("3 words").tag(3)
             }
-            .padding(.vertical, 8)
+            .pickerStyle(.segmented)
+
+            Toggle("Show Sentence Context", isOn: $engine.showSentenceContext)
+
+            VStack(spacing: 8) {
+                if wordsPerChunk == 3 {
+                    Text("the quick brown")
+                        .font(AppFont.rsvpPhrase(size: max(24, fontSize * 0.62)))
+                } else {
+                    Text("Sample")
+                        .font(AppFont.rsvpWord(size: fontSize))
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+
+            Text("Three-word mode reduces control fatigue and presents short phrase chunks.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -58,7 +84,9 @@ struct ReaderSettingsSheet: View {
         Section("Timing") {
             Toggle("Pause on Punctuation", isOn: $pauseOnPunctuation)
 
-            Text("When enabled, the reader pauses longer at sentence endings and clause breaks for better comprehension.")
+            Text(
+                "When enabled, the reader pauses longer at sentence endings and clause breaks for better comprehension."
+            )
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -72,6 +100,10 @@ struct ReaderSettingsSheet: View {
                 }
             }
         }
+    }
+
+    private func normalizedChunkSize(_ value: Int) -> Int {
+        value >= 3 ? 3 : 1
     }
 }
 
