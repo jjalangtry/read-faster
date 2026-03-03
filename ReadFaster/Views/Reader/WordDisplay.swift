@@ -81,16 +81,17 @@ struct WordDisplay: View {
         let parts = chunkDisplayParts
         if let focal = parts.anchor.focal {
             HStack(spacing: 0) {
-                Text(parts.before + parts.anchor.before)
+                Text(parts.leadingText)
                     .foregroundStyle(.primary)
+                    .frame(minWidth: 0, maxWidth: .infinity, alignment: .trailing)
                 Text(String(focal))
                     .foregroundStyle(.red)
-                Text(parts.anchor.after + parts.after)
+                Text(parts.trailingText)
                     .foregroundStyle(.primary)
+                    .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
             }
             .lineLimit(1)
             .minimumScaleFactor(0.65)
-            .multilineTextAlignment(.center)
         } else {
             Text(parts.before + parts.anchor.fullWord + parts.after)
                 .foregroundStyle(.primary)
@@ -120,6 +121,14 @@ struct WordDisplay: View {
         let before: String
         let anchor: ORPWord
         let after: String
+
+        var leadingText: String {
+            before + anchor.before
+        }
+
+        var trailingText: String {
+            anchor.after + after
+        }
     }
 }
 
