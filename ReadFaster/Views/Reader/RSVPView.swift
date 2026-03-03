@@ -107,7 +107,7 @@ struct RSVPView: View {
             setupEngine()
         }
         .onChange(of: wordDisplayModeRaw) { _, rawValue in
-            let mode = WordDisplayMode(rawValue: rawValue) ?? .singleWord
+            let mode = WordDisplayMode(rawValue: rawValue) ?? WordDisplayMode.singleWord
             guard mode.rawValue == rawValue else {
                 wordDisplayModeRaw = mode.rawValue
                 return
@@ -344,7 +344,9 @@ struct RSVPView: View {
               defaults.object(forKey: "wordsPerChunk") != nil else { return }
 
         let legacyValue = defaults.integer(forKey: "wordsPerChunk")
-        wordDisplayModeRaw = (legacyValue >= 3 ? WordDisplayMode.threeWordChunk : .singleWord).rawValue
+        wordDisplayModeRaw = (
+            legacyValue >= 3 ? WordDisplayMode.threeWordChunk : WordDisplayMode.singleWord
+        ).rawValue
     }
 
     private func addBookmark() {
@@ -362,11 +364,13 @@ struct RSVPView: View {
     }
 
     private var wordDisplayMode: WordDisplayMode {
-        WordDisplayMode(rawValue: wordDisplayModeRaw) ?? .singleWord
+        WordDisplayMode(rawValue: wordDisplayModeRaw) ?? WordDisplayMode.singleWord
     }
 
     private func toggleChunkMode() {
-        wordDisplayModeRaw = (wordDisplayMode == .threeWordChunk ? .singleWord : .threeWordChunk).rawValue
+        wordDisplayModeRaw = (
+            wordDisplayMode == .threeWordChunk ? WordDisplayMode.singleWord : WordDisplayMode.threeWordChunk
+        ).rawValue
     }
 
     @ViewBuilder

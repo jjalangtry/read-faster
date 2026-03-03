@@ -90,7 +90,7 @@ struct ReaderSettingsSheet: View {
     }
 
     private var wordDisplayMode: WordDisplayMode {
-        WordDisplayMode(rawValue: wordDisplayModeRaw) ?? .singleWord
+        WordDisplayMode(rawValue: wordDisplayModeRaw) ?? WordDisplayMode.singleWord
     }
 }
 
