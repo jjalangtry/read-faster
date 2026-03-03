@@ -16,18 +16,7 @@ final class RSVPEngine: ObservableObject {
             // Don't restart timer on every change - it will pick up new speed on next word
         }
     }
-    @Published var wordsPerChunk: Int = 1 {
-        didSet {
-            let normalized = (wordsPerChunk >= 3) ? 3 : 1
-            if wordsPerChunk != normalized {
-                wordsPerChunk = normalized
-                return
-            }
-            if hasContent {
-                currentWord = displayTextForCurrentChunk()
-            }
-        }
-    }
+    @Published private(set) var wordsPerChunk: Int = 1
 
     // MARK: - Configuration
     static let minWPM = 200
@@ -161,6 +150,18 @@ final class RSVPEngine: ObservableObject {
         currentIndex = 0
         currentWord = displayTextForCurrentChunk()
         isPlaying = false
+    }
+
+    /// Sets chunk size used for display and playback cadence.
+    /// Supported values are normalized to 1 or 3.
+    func setWordsPerChunk(_ value: Int) {
+        let normalized = value >= 3 ? 3 : 1
+        guard wordsPerChunk != normalized else { return }
+        wordsPerChunk = normalized
+
+        if hasContent {
+            currentWord = displayTextForCurrentChunk()
+        }
     }
 
     // MARK: - Reading Mode

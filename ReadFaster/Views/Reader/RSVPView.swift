@@ -62,9 +62,9 @@ struct RSVPView: View {
                     Button {
                         toggleChunkMode()
                     } label: {
-                        Image(systemName: engine.wordsPerChunk == 3 ? "text.justify" : "text.justify.left")
+                        Image(systemName: wordsPerChunk == 3 ? "text.justify" : "text.justify.left")
                     }
-                    .help(engine.wordsPerChunk == 3 ? "Switch to one-word mode" : "Switch to three-word mode")
+                    .help(wordsPerChunk == 3 ? "Switch to one-word mode" : "Switch to three-word mode")
 
                     Button {
                         showingBookmarks = true
@@ -107,15 +107,13 @@ struct RSVPView: View {
         }
         .onChange(of: wordsPerChunk) { _, newValue in
             let normalized = normalizedChunkSize(newValue)
-            if wordsPerChunk != normalized {
+            guard wordsPerChunk == normalized else {
                 wordsPerChunk = normalized
+                return
             }
-            engine.wordsPerChunk = normalized
-        }
-        .onChange(of: engine.wordsPerChunk) { _, newValue in
-            let normalized = normalizedChunkSize(newValue)
-            if wordsPerChunk != normalized {
-                wordsPerChunk = normalized
+            // Defer engine mutation to avoid publishing during view updates.
+            Task { @MainActor in
+                engine.setWordsPerChunk(normalized)
             }
         }
         .onChange(of: pauseOnPunctuation) { _, newValue in
@@ -226,7 +224,12 @@ struct RSVPView: View {
                 engine.applyMode(mode)
             }
 
-            ChunkModeControl(wordsPerChunk: $engine.wordsPerChunk)
+            ChunkModeControl(
+                wordsPerChunk: Binding(
+                    get: { wordsPerChunk },
+                    set: { wordsPerChunk = normalizedChunkSize($0) }
+                )
+            )
 
             // Progress bar
             ProgressSlider(
@@ -313,7 +316,7 @@ struct RSVPView: View {
         engine.load(words: book.words)
         engine.wordsPerMinute = defaultWPM
         engine.pauseOnPunctuation = pauseOnPunctuation
-        engine.wordsPerChunk = normalizedChunkSize(wordsPerChunk)
+        engine.setWordsPerChunk(normalizedChunkSize(wordsPerChunk))
 
         // Resume from saved position
         if let progress = book.progress {
@@ -360,9 +363,8 @@ struct RSVPView: View {
     }
 
     private func toggleChunkMode() {
-        let nextValue = engine.wordsPerChunk == 3 ? 1 : 3
+        let nextValue = wordsPerChunk == 3 ? 1 : 3
         wordsPerChunk = nextValue
-        engine.wordsPerChunk = nextValue
     }
 
     @ViewBuilder

@@ -31,14 +31,17 @@ struct ReaderSettingsSheet: View {
             }
             .onChange(of: wordsPerChunk) { _, newValue in
                 let normalized = normalizedChunkSize(newValue)
-                if wordsPerChunk != normalized {
+                guard wordsPerChunk == normalized else {
                     wordsPerChunk = normalized
+                    return
                 }
-                engine.wordsPerChunk = normalized
+                Task { @MainActor in
+                    engine.setWordsPerChunk(normalized)
+                }
             }
             .onAppear {
                 engine.pauseOnPunctuation = pauseOnPunctuation
-                engine.wordsPerChunk = normalizedChunkSize(wordsPerChunk)
+                engine.setWordsPerChunk(normalizedChunkSize(wordsPerChunk))
             }
         }
         #if os(macOS)
