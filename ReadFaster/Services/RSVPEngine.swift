@@ -65,7 +65,10 @@ final class RSVPEngine: ObservableObject {
     var isAtStart: Bool { currentIndex == 0 }
 
     private var baseInterval: TimeInterval {
-        60.0 / Double(wordsPerMinute)
+        // Keep WPM semantics consistent across display modes.
+        // In chunk mode, one tick advances multiple words.
+        let wordsInTick = max(1, currentChunkWordCount)
+        return (60.0 * Double(wordsInTick)) / Double(wordsPerMinute)
     }
 
     /// The currently visible range, based on `wordsPerChunk`.
@@ -77,6 +80,17 @@ final class RSVPEngine: ObservableObject {
 
     private var currentChunkWordCount: Int {
         currentChunkRange?.count ?? 0
+    }
+
+    var currentDisplayWordCount: Int {
+        max(1, currentChunkWordCount)
+    }
+
+    /// Progress based on the full visible chunk rather than only chunk start index.
+    var displayedProgress: Double {
+        guard totalWords > 0 else { return 0 }
+        let consumed = min(totalWords, currentIndex + currentDisplayWordCount)
+        return Double(consumed) / Double(totalWords)
     }
 
     // MARK: - Sentence Context Properties
@@ -161,6 +175,10 @@ final class RSVPEngine: ObservableObject {
 
         if hasContent {
             currentWord = displayTextForCurrentChunk()
+            if isPlaying {
+                timer?.invalidate()
+                scheduleNextWord()
+            }
         }
     }
 

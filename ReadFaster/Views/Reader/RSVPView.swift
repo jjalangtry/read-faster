@@ -15,7 +15,7 @@ struct RSVPView: View {
 
     @AppStorage("defaultWPM") private var defaultWPM: Int = 300
     @AppStorage("pauseOnPunctuation") private var pauseOnPunctuation: Bool = true
-    @AppStorage("wordsPerChunk") private var wordsPerChunk: Int = 1
+    @AppStorage("readerWordDisplayMode") private var wordDisplayModeRaw = WordDisplayMode.singleWord.rawValue
     
     // Platform-adaptive button sizes (larger on macOS for better click targets)
     #if os(macOS)
@@ -62,9 +62,9 @@ struct RSVPView: View {
                     Button {
                         toggleChunkMode()
                     } label: {
-                        Image(systemName: wordsPerChunk == 3 ? "text.justify" : "text.justify.left")
+                        Image(systemName: wordDisplayMode == .threeWordChunk ? "text.justify" : "text.justify.left")
                     }
-                    .help(wordsPerChunk == 3 ? "Switch to one-word mode" : "Switch to three-word mode")
+                    .help(wordDisplayMode == .threeWordChunk ? "Switch to one-word mode" : "Switch to three-word mode")
 
                     Button {
                         showingBookmarks = true
@@ -103,17 +103,18 @@ struct RSVPView: View {
                 .presentationDetents([.medium])
         }
         .onAppear {
+            migrateLegacyWordDisplayModeIfNeeded()
             setupEngine()
         }
-        .onChange(of: wordsPerChunk) { _, newValue in
-            let normalized = normalizedChunkSize(newValue)
-            guard wordsPerChunk == normalized else {
-                wordsPerChunk = normalized
+        .onChange(of: wordDisplayModeRaw) { _, rawValue in
+            let mode = WordDisplayMode(rawValue: rawValue) ?? .singleWord
+            guard mode.rawValue == rawValue else {
+                wordDisplayModeRaw = mode.rawValue
                 return
             }
             // Defer engine mutation to avoid publishing during view updates.
             Task { @MainActor in
-                engine.setWordsPerChunk(normalized)
+                engine.setWordsPerChunk(mode.wordsPerChunk)
             }
         }
         .onChange(of: pauseOnPunctuation) { _, newValue in
@@ -197,7 +198,7 @@ struct RSVPView: View {
             // Main RSVP word - always in the same position
             WordDisplay(
                 word: engine.currentWord,
-                showsORPHighlight: engine.wordsPerChunk == 1
+                usesChunkLayout: wordDisplayMode == .threeWordChunk
             )
                 .frame(maxWidth: min(geometry.size.width * 0.92, 680))
                 .contentShape(Rectangle())
@@ -224,17 +225,10 @@ struct RSVPView: View {
                 engine.applyMode(mode)
             }
 
-            ChunkModeControl(
-                wordsPerChunk: Binding(
-                    get: { wordsPerChunk },
-                    set: { wordsPerChunk = normalizedChunkSize($0) }
-                )
-            )
-
             // Progress bar
             ProgressSlider(
                 value: Binding(
-                    get: { engine.progress },
+                    get: { engine.displayedProgress },
                     set: { engine.seekToProgress($0) }
                 ),
                 isPlaying: engine.isPlaying
@@ -282,8 +276,8 @@ struct RSVPView: View {
         guard total > 0 else { return "0 / 0" }
 
         let start = min(max(engine.currentIndex + 1, 1), total)
-        let end = min(total, start + engine.wordsPerChunk - 1)
-        let percent = min(100, max(0, Int(engine.progress * 100)))
+        let end = min(total, start + engine.currentDisplayWordCount - 1)
+        let percent = min(100, max(0, Int(engine.displayedProgress * 100)))
 
         if end > start {
             return "\(start)-\(end) / \(total) (\(percent)%)"
@@ -294,7 +288,7 @@ struct RSVPView: View {
     
     /// Calculates time remaining based on current WPM and words left
     private var timeRemainingText: String? {
-        let wordsRemaining = max(0, engine.totalWords - engine.currentIndex)
+        let wordsRemaining = max(0, engine.totalWords - (engine.currentIndex + engine.currentDisplayWordCount))
         guard wordsRemaining > 0, engine.wordsPerMinute > 0 else { return nil }
         
         let minutesRemaining = Double(wordsRemaining) / Double(engine.wordsPerMinute)
@@ -316,7 +310,7 @@ struct RSVPView: View {
         engine.load(words: book.words)
         engine.wordsPerMinute = defaultWPM
         engine.pauseOnPunctuation = pauseOnPunctuation
-        engine.setWordsPerChunk(normalizedChunkSize(wordsPerChunk))
+        engine.setWordsPerChunk(wordDisplayMode.wordsPerChunk)
 
         // Resume from saved position
         if let progress = book.progress {
@@ -344,6 +338,15 @@ struct RSVPView: View {
         }
     }
 
+    private func migrateLegacyWordDisplayModeIfNeeded() {
+        let defaults = UserDefaults.standard
+        guard defaults.object(forKey: "readerWordDisplayMode") == nil,
+              defaults.object(forKey: "wordsPerChunk") != nil else { return }
+
+        let legacyValue = defaults.integer(forKey: "wordsPerChunk")
+        wordDisplayModeRaw = (legacyValue >= 3 ? WordDisplayMode.threeWordChunk : .singleWord).rawValue
+    }
+
     private func addBookmark() {
         let storage = StorageService(modelContext: modelContext)
         let words = book.words
@@ -358,13 +361,12 @@ struct RSVPView: View {
         )
     }
 
-    private func normalizedChunkSize(_ value: Int) -> Int {
-        value >= 3 ? 3 : 1
+    private var wordDisplayMode: WordDisplayMode {
+        WordDisplayMode(rawValue: wordDisplayModeRaw) ?? .singleWord
     }
 
     private func toggleChunkMode() {
-        let nextValue = wordsPerChunk == 3 ? 1 : 3
-        wordsPerChunk = nextValue
+        wordDisplayModeRaw = (wordDisplayMode == .threeWordChunk ? .singleWord : .threeWordChunk).rawValue
     }
 
     @ViewBuilder
@@ -601,28 +603,6 @@ struct WPMControl: View {
             let acceleration = Double(tickCount - 5) * 0.015
             return max(minimumTickInterval, initialTickInterval - acceleration)
         }
-    }
-}
-
-struct ChunkModeControl: View {
-    @Binding var wordsPerChunk: Int
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Text("Display")
-                .font(AppFont.caption)
-                .foregroundStyle(.secondary)
-
-            Picker("Display", selection: $wordsPerChunk) {
-                Text("1 word").tag(1)
-                Text("3 words").tag(3)
-            }
-            .pickerStyle(.segmented)
-            .frame(maxWidth: 220)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(.regularMaterial, in: Capsule())
     }
 }
 

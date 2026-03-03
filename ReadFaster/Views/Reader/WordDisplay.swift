@@ -2,7 +2,7 @@ import SwiftUI
 
 struct WordDisplay: View {
     let word: String
-    var showsORPHighlight: Bool = true
+    var usesChunkLayout: Bool = false
 
     @AppStorage("fontSize") private var fontSize: Double = 48
 
@@ -12,7 +12,7 @@ struct WordDisplay: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            if showsORPHighlight {
+            if !usesChunkLayout {
                 // Guide line above
                 guideLine
 
@@ -50,14 +50,9 @@ struct WordDisplay: View {
                         .offset(y: -6)
                 }
             } else {
-                // Phrase mode (3-word chunk) favors serif readability.
-                Text(word)
+                // 3-word chunk mode still preserves ORP-style focal highlight.
+                chunkHighlightedView
                     .font(AppFont.rsvpPhrase(size: max(30, fontSize * 0.72)))
-                    .foregroundStyle(.primary)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(2)
-                    .lineSpacing(6)
-                    .minimumScaleFactor(0.7)
                     .frame(maxWidth: .infinity, minHeight: 72)
             }
         }
@@ -72,13 +67,59 @@ struct WordDisplay: View {
         .shadow(color: .black.opacity(0.08), radius: 14, y: 8)
         .accessibilityElement()
         .accessibilityLabel(word)
-        .accessibilityHint(showsORPHighlight ? "Current word in RSVP reader" : "Current phrase in chunk reading mode")
+        .accessibilityHint(usesChunkLayout ? "Current phrase in chunk reading mode" : "Current word in RSVP reader")
     }
 
     private var guideLine: some View {
         Rectangle()
             .fill(Color.secondary.opacity(0.2))
             .frame(height: 1)
+    }
+
+    @ViewBuilder
+    private var chunkHighlightedView: some View {
+        let parts = chunkDisplayParts
+        if let focal = parts.anchor.focal {
+            HStack(spacing: 0) {
+                Text(parts.before + parts.anchor.before)
+                    .foregroundStyle(.primary)
+                Text(String(focal))
+                    .foregroundStyle(.red)
+                Text(parts.anchor.after + parts.after)
+                    .foregroundStyle(.primary)
+            }
+            .lineLimit(1)
+            .minimumScaleFactor(0.65)
+            .multilineTextAlignment(.center)
+        } else {
+            Text(parts.before + parts.anchor.fullWord + parts.after)
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.65)
+                .multilineTextAlignment(.center)
+        }
+    }
+
+    private var chunkDisplayParts: ChunkDisplayParts {
+        let words = word.split(whereSeparator: \.isWhitespace).map(String.init)
+        guard !words.isEmpty else {
+            return ChunkDisplayParts(before: "", anchor: ORPWord(word: ""), after: "")
+        }
+
+        let anchorIndex = words.count >= 2 ? 1 : 0
+        let beforeWords = words.prefix(anchorIndex).joined(separator: " ")
+        let afterWords = words.dropFirst(anchorIndex + 1).joined(separator: " ")
+        let anchorWord = ORPWord(word: words[anchorIndex])
+
+        let before = beforeWords.isEmpty ? "" : beforeWords + " "
+        let after = afterWords.isEmpty ? "" : " " + afterWords
+        return ChunkDisplayParts(before: before, anchor: anchorWord, after: after)
+    }
+
+    private struct ChunkDisplayParts {
+        let before: String
+        let anchor: ORPWord
+        let after: String
     }
 }
 
@@ -106,6 +147,6 @@ struct WordDisplay: View {
 }
 
 #Preview("Phrase mode") {
-    WordDisplay(word: "the quick brown", showsORPHighlight: false)
+    WordDisplay(word: "the quick brown", usesChunkLayout: true)
         .padding()
 }
