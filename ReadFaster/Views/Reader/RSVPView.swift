@@ -129,27 +129,25 @@ struct RSVPView: View {
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .primaryAction) {
-            HStack(spacing: 8) {
-                Button { toggleChunkMode() } label: {
-                    Image(systemName: wordDisplayMode == .threeWordChunk
-                          ? "text.justify" : "text.justify.left")
-                }
+        ToolbarItemGroup(placement: .primaryAction) {
+            Button { toggleChunkMode() } label: {
+                Image(systemName: wordDisplayMode == .threeWordChunk
+                      ? "text.justify" : "text.justify.left")
+            }
 
-                Button { showingBookmarks = true } label: {
-                    Image(systemName: book.bookmarks.isEmpty
-                          ? "bookmark" : "bookmark.fill")
-                }
+            Button { showingBookmarks = true } label: {
+                Image(systemName: book.bookmarks.isEmpty
+                      ? "bookmark" : "bookmark.fill")
+            }
 
-                if book.hasChapters {
-                    Button { showingChapters = true } label: {
-                        Image(systemName: "list.bullet.indent")
-                    }
+            if book.hasChapters {
+                Button { showingChapters = true } label: {
+                    Image(systemName: "list.bullet.indent")
                 }
+            }
 
-                Button { showingSettings = true } label: {
-                    Image(systemName: "gear")
-                }
+            Button { showingSettings = true } label: {
+                Image(systemName: "gear")
             }
         }
     }
@@ -308,38 +306,40 @@ struct RSVPView: View {
     // MARK: - Transport Controls
 
     private var transportControls: some View {
-        HStack {
-            Spacer()
+        GlassEffectContainer {
+            HStack {
+                Spacer()
 
-            TransportButton(
-                icon: "backward.fill",
-                disabled: !engine.hasContent || engine.isAtStart,
-                size: 40
-            ) {
-                engine.previousSentence()
+                TransportButton(
+                    icon: "backward.fill",
+                    disabled: !engine.hasContent || engine.isAtStart,
+                    size: 44
+                ) {
+                    engine.previousSentence()
+                }
+
+                Spacer()
+
+                PlayPauseButton(
+                    isPlaying: engine.isPlaying,
+                    disabled: !engine.hasContent,
+                    size: 56
+                ) {
+                    engine.toggle()
+                }
+
+                Spacer()
+
+                TransportButton(
+                    icon: "forward.fill",
+                    disabled: engine.isAtEnd,
+                    size: 44
+                ) {
+                    engine.nextSentence()
+                }
+
+                Spacer()
             }
-
-            Spacer()
-
-            PlayPauseButton(
-                isPlaying: engine.isPlaying,
-                disabled: !engine.hasContent,
-                size: 56
-            ) {
-                engine.toggle()
-            }
-
-            Spacer()
-
-            TransportButton(
-                icon: "forward.fill",
-                disabled: engine.isAtEnd,
-                size: 40
-            ) {
-                engine.nextSentence()
-            }
-
-            Spacer()
         }
     }
 }

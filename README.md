@@ -2,7 +2,7 @@
 
 A speed reading app for macOS and iOS using RSVP (Rapid Serial Visual Presentation) with comprehension-enhancing features.
 
-**Version 0.12.0**
+**Version 0.11.3**
 
 ## Features
 

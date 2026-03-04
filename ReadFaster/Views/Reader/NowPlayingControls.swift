@@ -11,14 +11,12 @@ struct PlayPauseButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                .font(.system(size: size * 0.52, weight: .regular))
-                .foregroundStyle(disabled ? .tertiary : .primary)
+                .font(.system(size: size * 0.5, weight: .regular))
                 .frame(width: size, height: size)
                 .contentShape(Circle())
         }
-        .buttonStyle(.plain)
-        .opacity(disabled ? 0.4 : 1.0)
-        .allowsHitTesting(!disabled)
+        .buttonStyle(.glass)
+        .disabled(disabled)
         #if os(iOS)
         .sensoryFeedback(.impact(flexibility: .soft), trigger: isPlaying)
         #endif
@@ -30,20 +28,18 @@ struct PlayPauseButton: View {
 struct TransportButton: View {
     let icon: String
     var disabled: Bool = false
-    var size: CGFloat = 36
+    var size: CGFloat = 44
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             Image(systemName: icon)
-                .font(.system(size: size * 0.62, weight: .regular))
-                .foregroundStyle(disabled ? .tertiary : .primary)
+                .font(.system(size: size * 0.55, weight: .regular))
                 .frame(width: size, height: size)
-                .contentShape(Circle())
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .opacity(disabled ? 0.4 : 1.0)
-        .allowsHitTesting(!disabled)
+        .disabled(disabled)
     }
 }
 
@@ -80,15 +76,19 @@ struct WPMControl: View {
     }
 
     private var compactStepper: some View {
-        HStack(spacing: 0) {
-            wpmStepperButton(
-                icon: "minus",
-                isPressed: $isDecreasePressed,
-                disabled: wpm <= RSVPEngine.minWPM,
-                onTap: { adjustWPM(by: -step) },
-                onHoldStart: { startTimer(isDecrease: true) },
-                onHoldEnd: { stopTimer(isDecrease: true) }
-            )
+        HStack(spacing: 4) {
+            Button {
+                adjustWPM(by: -step)
+            } label: {
+                Image(systemName: "minus")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(width: 36, height: 36)
+            }
+            .buttonStyle(.glass)
+            .disabled(wpm <= RSVPEngine.minWPM)
+            #if os(iOS)
+            .sensoryFeedback(.selection, trigger: wpm)
+            #endif
 
             Button {
                 sliderValue = Double(wpm)
@@ -97,24 +97,24 @@ struct WPMControl: View {
                 Text("\(wpm) WPM")
                     .font(AppFont.semibold(size: 15))
                     .monospacedDigit()
-                    .foregroundStyle(.primary)
-                    .frame(minWidth: 90, minHeight: 44)
+                    .frame(minWidth: 86, minHeight: 36)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
 
-            wpmStepperButton(
-                icon: "plus",
-                isPressed: $isIncreasePressed,
-                disabled: wpm >= RSVPEngine.maxWPM,
-                onTap: { adjustWPM(by: step) },
-                onHoldStart: { startTimer(isDecrease: false) },
-                onHoldEnd: { stopTimer(isDecrease: false) }
-            )
+            Button {
+                adjustWPM(by: step)
+            } label: {
+                Image(systemName: "plus")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(width: 36, height: 36)
+            }
+            .buttonStyle(.glass)
+            .disabled(wpm >= RSVPEngine.maxWPM)
+            #if os(iOS)
+            .sensoryFeedback(.selection, trigger: wpm)
+            #endif
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(.ultraThinMaterial, in: Capsule())
     }
 
     private var expandedSlider: some View {
@@ -124,10 +124,9 @@ struct WPMControl: View {
             } label: {
                 Image(systemName: "xmark")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
                     .frame(width: 32, height: 32)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.glass)
 
             Slider(
                 value: $sliderValue,
@@ -146,110 +145,13 @@ struct WPMControl: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
-        .background(.regularMaterial, in: Capsule())
-    }
-
-    @ViewBuilder
-    private func wpmStepperButton(
-        icon: String,
-        isPressed: Binding<Bool>,
-        disabled: Bool,
-        onTap: @escaping () -> Void,
-        onHoldStart: @escaping () -> Void,
-        onHoldEnd: @escaping () -> Void
-    ) -> some View {
-        Image(systemName: icon)
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(disabled ? .tertiary : .primary)
-            .frame(width: 44, height: 44)
-            .contentShape(Circle())
-            .scaleEffect(isPressed.wrappedValue ? 0.88 : 1.0)
-            .animation(.easeOut(duration: 0.1), value: isPressed.wrappedValue)
-            .opacity(disabled ? 0.5 : 1.0)
-            .gesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { _ in
-                        guard !disabled, !isPressed.wrappedValue else { return }
-                        isPressed.wrappedValue = true
-                        onHoldStart()
-                    }
-                    .onEnded { _ in
-                        let wasHolding = tickCount > 0
-                        onHoldEnd()
-                        isPressed.wrappedValue = false
-                        if !wasHolding && !disabled { onTap() }
-                    }
-            )
-            .allowsHitTesting(!disabled)
-            #if os(iOS)
-            .sensoryFeedback(.selection, trigger: isPressed.wrappedValue)
-            #endif
+        .glassEffect(.regular, in: .capsule)
     }
 
     private func adjustWPM(by delta: Int) {
         let clamped = min(RSVPEngine.maxWPM, max(RSVPEngine.minWPM, wpm + delta))
         wpm = clamped
         sliderValue = Double(clamped)
-    }
-
-    private func startTimer(isDecrease: Bool) {
-        tickCount = 0
-        let newTimer = Timer.scheduledTimer(
-            withTimeInterval: holdDelay,
-            repeats: false
-        ) { _ in
-            Task { @MainActor in
-                let active = isDecrease ? isDecreasePressed : isIncreasePressed
-                guard active else { return }
-                tickCount += 1
-                adjustWPM(by: isDecrease ? -step : step)
-                continueTimer(isDecrease: isDecrease)
-            }
-        }
-        if isDecrease { decreaseTimer = newTimer } else { increaseTimer = newTimer }
-    }
-
-    private func continueTimer(isDecrease: Bool) {
-        let interval = currentTickInterval
-        if isDecrease {
-            decreaseTimer?.invalidate()
-        } else {
-            increaseTimer?.invalidate()
-        }
-        let newTimer = Timer.scheduledTimer(
-            withTimeInterval: interval,
-            repeats: false
-        ) { _ in
-            Task { @MainActor in
-                let active = isDecrease ? isDecreasePressed : isIncreasePressed
-                guard active else { return }
-                let atLimit = isDecrease
-                    ? wpm <= RSVPEngine.minWPM
-                    : wpm >= RSVPEngine.maxWPM
-                guard !atLimit else { return }
-                tickCount += 1
-                adjustWPM(by: isDecrease ? -step : step)
-                continueTimer(isDecrease: isDecrease)
-            }
-        }
-        if isDecrease { decreaseTimer = newTimer } else { increaseTimer = newTimer }
-    }
-
-    private func stopTimer(isDecrease: Bool) {
-        if isDecrease {
-            decreaseTimer?.invalidate()
-            decreaseTimer = nil
-        } else {
-            increaseTimer?.invalidate()
-            increaseTimer = nil
-        }
-        tickCount = 0
-    }
-
-    private var currentTickInterval: TimeInterval {
-        if tickCount < 5 { return initialTickInterval }
-        let accel = Double(tickCount - 5) * 0.015
-        return max(minimumTickInterval, initialTickInterval - accel)
     }
 }
 
@@ -259,25 +161,28 @@ struct ReadingModeSelector: View {
     let currentMode: ReadingMode
     let onModeChange: (ReadingMode) -> Void
 
+    @Namespace private var modeNS
+
     var body: some View {
-        HStack(spacing: 6) {
-            ForEach(ReadingMode.allCases) { mode in
-                ModeButton(
-                    mode: mode,
-                    isSelected: mode == currentMode,
-                    action: { onModeChange(mode) }
-                )
+        GlassEffectContainer {
+            HStack(spacing: 4) {
+                ForEach(ReadingMode.allCases) { mode in
+                    ModeChip(
+                        mode: mode,
+                        isSelected: mode == currentMode,
+                        namespace: modeNS,
+                        action: { onModeChange(mode) }
+                    )
+                }
             }
         }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 5)
-        .background(.ultraThinMaterial, in: Capsule())
     }
 }
 
-struct ModeButton: View {
+struct ModeChip: View {
     let mode: ReadingMode
     let isSelected: Bool
+    var namespace: Namespace.ID
     let action: () -> Void
 
     var body: some View {
@@ -291,16 +196,15 @@ struct ModeButton: View {
                         .font(AppFont.medium(size: 13))
                 }
             }
-            .foregroundStyle(isSelected ? .primary : .secondary)
-            .padding(.horizontal, isSelected ? 12 : 10)
-            .padding(.vertical, 7)
-            .background {
-                if isSelected {
-                    Capsule().fill(Color.accentColor.opacity(0.18))
-                }
-            }
+            .padding(.horizontal, isSelected ? 14 : 10)
+            .padding(.vertical, 8)
         }
         .buttonStyle(.plain)
-        .animation(.easeInOut(duration: 0.2), value: isSelected)
+        .glassEffect(
+            isSelected ? .regular.tint(.accentColor).interactive() : .regular,
+            in: .capsule
+        )
+        .glassEffectID(mode.id, in: namespace)
+        .animation(.easeInOut(duration: 0.25), value: isSelected)
     }
 }

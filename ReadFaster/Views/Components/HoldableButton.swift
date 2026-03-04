@@ -33,17 +33,12 @@ struct HoldableButton: View {
             .contentShape(Circle())
             .scaleEffect(isPressed ? 0.9 : 1.0)
             .animation(.easeOut(duration: 0.1), value: isPressed)
-            .background {
-                if accentedBackground {
-                    Circle()
-                        .fill(.clear)
-                        .glassEffect(.regular.tint(.accentColor).interactive(), in: Circle())
-                } else {
-                    Circle()
-                        .fill(.clear)
-                        .glassEffect(.regular.interactive(), in: Circle())
-                }
-            }
+            .glassEffect(
+                accentedBackground
+                    ? .regular.tint(.accentColor).interactive()
+                    : .regular.interactive(),
+                in: .circle
+            )
             .opacity(disabled ? 0.5 : 1.0)
             .gesture(
                 DragGesture(minimumDistance: 0)
