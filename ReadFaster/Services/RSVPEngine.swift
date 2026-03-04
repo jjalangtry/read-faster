@@ -1,18 +1,12 @@
 import Foundation
 import Combine
-#if canImport(AVFoundation)
-import AVFoundation
-#endif
 
 @MainActor
-// swiftlint:disable type_body_length
 final class RSVPEngine: ObservableObject {
     // MARK: - Published State
     @Published private(set) var currentWord: String = ""
     @Published private(set) var currentIndex: Int = 0
     @Published private(set) var isPlaying: Bool = false
-    @Published private(set) var playbackMode: ReaderPlaybackMode = .rsvp
-    @Published private(set) var currentTranscriptLine: String = ""
     @Published var wordsPerMinute: Int = 300 {
         didSet {
             let clamped = min(max(wordsPerMinute, Self.minWPM), Self.maxWPM)
@@ -38,13 +32,6 @@ final class RSVPEngine: ObservableObject {
     private var timer: Timer?
     private var sessionStartTime: Date?
     private var wordsReadInSession: Int = 0
-    private let narrator: SpeechNarrationControlling = {
-        #if canImport(AVFoundation)
-        return AVSpeechNarrationController()
-        #else
-        return NoopSpeechNarrationController()
-        #endif
-    }()
     
     // MARK: - Ramp-Up State
     /// Number of words remaining in the ramp-up period (starts slow, accelerates to target speed)
@@ -166,7 +153,6 @@ final class RSVPEngine: ObservableObject {
         computeWordComplexity()
         currentIndex = 0
         currentWord = displayTextForCurrentChunk()
-        updateTranscriptForCurrentPosition()
         isPlaying = false
     }
 
@@ -177,7 +163,6 @@ final class RSVPEngine: ObservableObject {
         computeWordComplexity()
         currentIndex = 0
         currentWord = displayTextForCurrentChunk()
-        updateTranscriptForCurrentPosition()
         isPlaying = false
     }
 
@@ -190,23 +175,10 @@ final class RSVPEngine: ObservableObject {
 
         if hasContent {
             currentWord = displayTextForCurrentChunk()
-            updateTranscriptForCurrentPosition()
             if isPlaying {
-                restartActivePlayback()
+                timer?.invalidate()
+                scheduleNextWord()
             }
-        }
-    }
-
-    func setPlaybackMode(_ mode: ReaderPlaybackMode) {
-        guard playbackMode != mode else { return }
-        let wasPlaying = isPlaying
-        pause()
-        playbackMode = mode
-        currentWord = displayTextForCurrentChunk()
-        updateTranscriptForCurrentPosition()
-
-        if wasPlaying {
-            play()
         }
     }
 
@@ -235,13 +207,13 @@ final class RSVPEngine: ObservableObject {
         sentenceStartIndices.insert(0)
         sentenceStartList.append(0)
 
-        for wordIndex in 0..<words.count - 1 {
-            let word = words[wordIndex]
+        for i in 0..<words.count - 1 {
+            let word = words[i]
             // Check if this word ends a sentence
             if isSentenceEnding(word) {
                 // Next word starts a new sentence
-                sentenceStartIndices.insert(wordIndex + 1)
-                sentenceStartList.append(wordIndex + 1)
+                sentenceStartIndices.insert(i + 1)
+                sentenceStartList.append(i + 1)
             }
         }
     }
@@ -326,13 +298,13 @@ final class RSVPEngine: ObservableObject {
     private func hasComplexPunctuation(at index: Int) -> Bool {
         // Check current word and neighbors for complex punctuation
         let range = max(0, index - 1)...min(words.count - 1, index + 1)
-        for surroundingIndex in range {
-            let word = words[surroundingIndex]
+        for i in range {
+            let word = words[i]
             if word.contains(";") || word.contains(":") || word.contains("—") || word.contains("–") {
                 return true
             }
             // Multiple commas in close proximity suggests complex clause structure
-            if word.contains(",") && surroundingIndex != index {
+            if word.contains(",") && i != index {
                 return true
             }
         }
@@ -344,22 +316,15 @@ final class RSVPEngine: ObservableObject {
         isPlaying = true
         sessionStartTime = Date()
         wordsReadInSession = 0
-
-        switch playbackMode {
-        case .rsvp:
-            // Start ramp-up: first few words are slower to ease back in
-            rampUpWordsRemaining = rampUpLength
-            scheduleNextWord()
-        case .audioTranscription:
-            speakCurrentSentence()
-        }
+        // Start ramp-up: first few words are slower to ease back in
+        rampUpWordsRemaining = rampUpLength
+        scheduleNextWord()
     }
 
     func pause() {
         isPlaying = false
         timer?.invalidate()
         timer = nil
-        narrator.stop()
         saveProgress()
     }
 
@@ -375,17 +340,16 @@ final class RSVPEngine: ObservableObject {
         guard totalWords > 0 else {
             currentIndex = 0
             currentWord = ""
-            currentTranscriptLine = ""
             return
         }
 
         let clampedIndex = min(max(index, 0), totalWords - 1)
         currentIndex = clampedIndex
         currentWord = displayTextForCurrentChunk()
-        updateTranscriptForCurrentPosition()
 
         if isPlaying {
-            restartActivePlayback()
+            timer?.invalidate()
+            scheduleNextWord()
         }
     }
 
@@ -454,87 +418,6 @@ final class RSVPEngine: ObservableObject {
     }
 
     // MARK: - Private Methods
-    private func restartActivePlayback() {
-        timer?.invalidate()
-        timer = nil
-        narrator.stop()
-
-        switch playbackMode {
-        case .rsvp:
-            scheduleNextWord()
-        case .audioTranscription:
-            speakCurrentSentence()
-        }
-    }
-
-    private func updateTranscriptForCurrentPosition() {
-        if currentSentenceWords.isEmpty {
-            currentTranscriptLine = ""
-        } else {
-            currentTranscriptLine = currentSentenceWords.joined(separator: " ")
-        }
-    }
-
-    private func speakCurrentSentence() {
-        guard isPlaying else { return }
-        guard currentIndex < totalWords else {
-            currentWord = ""
-            currentTranscriptLine = ""
-            pause()
-            return
-        }
-
-        let sentenceStart = currentSentenceStartIndex
-        let sentenceEnd = currentSentenceEndIndex
-        let sentenceWordCount = max(1, sentenceEnd - sentenceStart)
-        let transcript = currentSentenceWords.joined(separator: " ")
-        currentTranscriptLine = transcript
-
-        guard !transcript.isEmpty else {
-            currentIndex = min(totalWords, sentenceEnd)
-            if currentIndex < totalWords {
-                currentWord = displayTextForCurrentChunk()
-                updateTranscriptForCurrentPosition()
-                speakCurrentSentence()
-            } else {
-                currentWord = ""
-                currentTranscriptLine = ""
-                pause()
-            }
-            return
-        }
-
-        narrator.speak(text: transcript, rate: speechRate) { [weak self] finished in
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                guard finished else {
-                    self.pause()
-                    return
-                }
-                guard self.isPlaying, self.playbackMode == .audioTranscription else { return }
-
-                self.currentIndex = min(self.totalWords, sentenceEnd)
-                self.wordsReadInSession += sentenceWordCount
-
-                if self.currentIndex < self.totalWords {
-                    self.currentWord = self.displayTextForCurrentChunk()
-                    self.updateTranscriptForCurrentPosition()
-                    self.speakCurrentSentence()
-                } else {
-                    self.currentWord = ""
-                    self.currentTranscriptLine = ""
-                    self.pause()
-                }
-            }
-        }
-    }
-
-    private var speechRate: Float {
-        let normalized = Double(wordsPerMinute - Self.minWPM) / Double(Self.maxWPM - Self.minWPM)
-        let clamped = min(max(normalized, 0), 1)
-        return Float(0.38 + (0.24 * clamped))
-    }
-
     private func scheduleNextWord() {
         guard isPlaying, currentIndex < totalWords else {
             if isAtEnd {
@@ -559,11 +442,9 @@ final class RSVPEngine: ObservableObject {
 
         if currentIndex < totalWords {
             currentWord = displayTextForCurrentChunk()
-            updateTranscriptForCurrentPosition()
             scheduleNextWord()
         } else {
             currentWord = ""
-            currentTranscriptLine = ""
             pause()
         }
     }
@@ -648,7 +529,6 @@ final class RSVPEngine: ObservableObject {
         wordsReadInSession = 0
     }
 }
-// swiftlint:enable type_body_length
 
 // MARK: - Array Extension
 private extension Array {
@@ -656,59 +536,3 @@ private extension Array {
         indices.contains(index) ? self[index] : nil
     }
 }
-
-// MARK: - Speech Narration
-
-private protocol SpeechNarrationControlling: AnyObject {
-    func speak(text: String, rate: Float, onFinish: @escaping (Bool) -> Void)
-    func stop()
-}
-
-private final class NoopSpeechNarrationController: SpeechNarrationControlling {
-    func speak(text: String, rate: Float, onFinish: @escaping (Bool) -> Void) {
-        onFinish(false)
-    }
-
-    func stop() { }
-}
-
-#if canImport(AVFoundation)
-private final class AVSpeechNarrationController: NSObject, SpeechNarrationControlling, AVSpeechSynthesizerDelegate {
-    private let synthesizer = AVSpeechSynthesizer()
-    private var finishHandler: ((Bool) -> Void)?
-
-    override init() {
-        super.init()
-        synthesizer.delegate = self
-    }
-
-    func speak(text: String, rate: Float, onFinish: @escaping (Bool) -> Void) {
-        stop()
-        finishHandler = onFinish
-
-        let utterance = AVSpeechUtterance(string: text)
-        utterance.rate = rate
-        utterance.voice = AVSpeechSynthesisVoice(language: Locale.current.identifier)
-        synthesizer.speak(utterance)
-    }
-
-    func stop() {
-        if synthesizer.isSpeaking {
-            synthesizer.stopSpeaking(at: .immediate)
-        }
-        finishHandler = nil
-    }
-
-    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
-        let handler = finishHandler
-        finishHandler = nil
-        handler?(true)
-    }
-
-    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
-        let handler = finishHandler
-        finishHandler = nil
-        handler?(false)
-    }
-}
-#endif

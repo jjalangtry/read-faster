@@ -96,37 +96,6 @@ enum WordDisplayMode: String, CaseIterable, Codable, Identifiable {
     }
 }
 
-/// Controls whether reading is visual RSVP or spoken transcription playback.
-enum ReaderPlaybackMode: String, CaseIterable, Codable, Identifiable {
-    case rsvp
-    case audioTranscription
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .rsvp: return "RSVP"
-        case .audioTranscription: return "Listen & Transcript"
-        }
-    }
-
-    var subtitle: String {
-        switch self {
-        case .rsvp:
-            return "Visual speed-reading with focal ORP highlighting."
-        case .audioTranscription:
-            return "Speaks each sentence aloud while showing live transcript text."
-        }
-    }
-
-    var icon: String {
-        switch self {
-        case .rsvp: return "text.redaction"
-        case .audioTranscription: return "waveform"
-        }
-    }
-}
-
 /// Configuration settings for a reading mode
 struct ModeSettings {
     let baseWPM: Int

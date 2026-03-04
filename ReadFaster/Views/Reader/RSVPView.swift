@@ -1,7 +1,6 @@
 import SwiftUI
 import SwiftData
 
-// swiftlint:disable type_body_length file_length
 struct RSVPView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -17,24 +16,39 @@ struct RSVPView: View {
     @AppStorage("defaultWPM") private var defaultWPM: Int = 300
     @AppStorage("pauseOnPunctuation") private var pauseOnPunctuation: Bool = true
     @AppStorage("readerWordDisplayMode") private var wordDisplayModeRaw = WordDisplayMode.singleWord.rawValue
-    @AppStorage("readerPlaybackMode") private var playbackModeRaw = ReaderPlaybackMode.rsvp.rawValue
+    
+    // Platform-adaptive button sizes (larger on macOS for better click targets)
+    #if os(macOS)
+    private let controlButtonSize: CGFloat = 56
+    private let playButtonSize: CGFloat = 72
+    #else
+    private let controlButtonSize: CGFloat = 52
+    private let playButtonSize: CGFloat = 68
+    #endif
 
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                liquidGlassBackdrop
+                // Background - allows glass to sample content
+                #if os(macOS)
+                Color(NSColor.windowBackgroundColor)
+                    .ignoresSafeArea()
+                #else
+                Color(UIColor.systemBackground)
+                    .ignoresSafeArea()
+                #endif
 
                 VStack(spacing: 0) {
-                    Spacer(minLength: 10)
+                    Spacer()
 
                     wordDisplayArea(geometry: geometry)
-                        .padding(.horizontal, 18)
 
-                    Spacer(minLength: 8)
+                    Spacer()
 
+                    // Floating glass controls at bottom
                     floatingControls
-                        .padding(.horizontal, 14)
-                        .padding(.bottom, max(8, geometry.safeAreaInsets.bottom - 4))
+                        .padding(.horizontal)
+                        .padding(.bottom, 8)
                 }
             }
         }
@@ -46,19 +60,11 @@ struct RSVPView: View {
             ToolbarItem(placement: .primaryAction) {
                 HStack(spacing: 8) {
                     Button {
-                        togglePlaybackMode()
-                    } label: {
-                        Image(systemName: playbackMode == .audioTranscription ? "waveform.badge.mic" : "waveform")
-                    }
-                    .help(playbackMode == .audioTranscription ? "Switch to RSVP mode" : "Switch to listen mode")
-
-                    Button {
                         toggleChunkMode()
                     } label: {
                         Image(systemName: wordDisplayMode == .threeWordChunk ? "text.justify" : "text.justify.left")
                     }
                     .help(wordDisplayMode == .threeWordChunk ? "Switch to one-word mode" : "Switch to three-word mode")
-                    .disabled(playbackMode == .audioTranscription)
 
                     Button {
                         showingBookmarks = true
@@ -109,16 +115,6 @@ struct RSVPView: View {
             // Defer engine mutation to avoid publishing during view updates.
             Task { @MainActor in
                 engine.setWordsPerChunk(mode.wordsPerChunk)
-            }
-        }
-        .onChange(of: playbackModeRaw) { _, rawValue in
-            let mode = ReaderPlaybackMode(rawValue: rawValue) ?? ReaderPlaybackMode.rsvp
-            guard mode.rawValue == rawValue else {
-                playbackModeRaw = mode.rawValue
-                return
-            }
-            Task { @MainActor in
-                engine.setPlaybackMode(mode)
             }
         }
         .onChange(of: pauseOnPunctuation) { _, newValue in
@@ -172,10 +168,6 @@ struct RSVPView: View {
             toggleChunkMode()
             return .handled
         }
-        .onKeyPress("a") {
-            togglePlaybackMode()
-            return .handled
-        }
         .focusable()
         #else
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in
@@ -184,427 +176,98 @@ struct RSVPView: View {
         #endif
     }
 
-    private var liquidGlassBackdrop: some View {
-        ZStack {
-            LinearGradient(
-                colors: [
-                    Color.accentColor.opacity(0.42),
-                    Color.accentColor.opacity(0.2),
-                    Color.black.opacity(0.62)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-
-            RadialGradient(
-                colors: [Color.white.opacity(0.18), .clear],
-                center: .topLeading,
-                startRadius: 18,
-                endRadius: 340
-            )
-            .blendMode(.screen)
-
-            RadialGradient(
-                colors: [Color.accentColor.opacity(0.3), .clear],
-                center: .topTrailing,
-                startRadius: 12,
-                endRadius: 360
-            )
-            .blendMode(.plusLighter)
-        }
-        .ignoresSafeArea()
-    }
-
     @ViewBuilder
     private func wordDisplayArea(geometry: GeometryProxy) -> some View {
-        VStack(spacing: 14) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 30, style: .continuous)
-                    .fill(.clear)
-                    .glassEffect(
-                        .regular.tint(.white.opacity(0.08)),
-                        in: RoundedRectangle(cornerRadius: 30, style: .continuous)
-                    )
-
-                VStack(spacing: 12) {
-                    Spacer(minLength: 18)
-                    if playbackMode == .audioTranscription {
-                        transcriptHeroView
-                            .frame(maxWidth: min(geometry.size.width * 0.82, 680))
-                    } else {
-                        WordDisplay(
-                            word: engine.currentWord,
-                            usesChunkLayout: wordDisplayMode == .threeWordChunk
-                        )
-                        .frame(maxWidth: min(geometry.size.width * 0.86, 640))
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            engine.toggle()
-                        }
-                    }
-
-                    Spacer(minLength: 10)
-                }
-                .padding(.horizontal, 10)
-            }
-            .frame(
-                maxWidth: min(geometry.size.width * 0.94, 760),
-                minHeight: 260,
-                maxHeight: min(max(290, geometry.size.height * 0.42), 420)
-            )
-            .shadow(color: .black.opacity(0.26), radius: 26, y: 14)
-
+        VStack(spacing: 12) {
+            // Sentence context - dynamic height, clipped to bounds
             if engine.showSentenceContext && !engine.currentSentenceWords.isEmpty {
                 SentenceContextView(
                     words: engine.currentSentenceWords,
                     currentWordIndex: engine.currentWordIndexInSentence
                 )
                 .frame(
-                    maxWidth: min(geometry.size.width * 0.94, 760),
-                    minHeight: 98,
-                    maxHeight: 98,
+                    maxWidth: min(geometry.size.width * 0.95, 640),
+                    minHeight: 120,
+                    maxHeight: 120,
                     alignment: .top
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .background {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(.clear)
-                        .glassEffect(
-                            .regular.tint(.white.opacity(0.08)),
-                            in: RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        )
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+            }
+            
+            // Main RSVP word - always in the same position
+            WordDisplay(
+                word: engine.currentWord,
+                usesChunkLayout: wordDisplayMode == .threeWordChunk
+            )
+                .frame(maxWidth: min(geometry.size.width * 0.92, 680))
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    engine.toggle()
+                }
+
+            // Status: word count and time remaining
+            HStack(spacing: 8) {
+                statusChip(text: statusText, systemImage: "textformat.123")
+
+                if let timeRemaining = timeRemainingText {
+                    statusChip(text: timeRemaining, systemImage: "clock")
                 }
             }
-        }
-    }
-
-    private var transcriptHeroView: some View {
-        VStack(spacing: 14) {
-            Image(systemName: "waveform.and.mic")
-                .font(.system(size: 28, weight: .semibold))
-                .foregroundStyle(.secondary)
-
-            Text(transcriptHeadline)
-                .font(AppFont.semibold(size: 30))
-                .multilineTextAlignment(.center)
-                .lineLimit(4)
-                .minimumScaleFactor(0.7)
-
-            Text(playbackMode.subtitle)
-                .font(AppFont.footnote)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-        }
-        .padding(.horizontal, 12)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            engine.toggle()
+            .padding(.top, 6)
         }
     }
 
     private var floatingControls: some View {
-        VStack(spacing: 18) {
-            Capsule()
-                .fill(.white.opacity(0.36))
-                .frame(width: 42, height: 5)
-                .padding(.top, 2)
-
-            nowPlayingHeader
-
-            ProgressSlider(
-                value: Binding(
-                    get: { chapterProgress },
-                    set: { seekWithinCurrentChapter(to: $0) }
-                ),
-                isPlaying: engine.isPlaying,
-                leadingLabel: chapterElapsedLabel,
-                trailingLabel: chapterRemainingLabel
-            )
-
-            transportControls
-
-            tempoStrip
-
-            secondaryControlRow
-
+        VStack(spacing: 16) {
+            // Reading mode selector
             ReadingModeSelector(currentMode: engine.currentMode) { mode in
                 engine.applyMode(mode)
             }
-        }
-        .padding(.horizontal, 20)
-        .padding(.top, 14)
-        .padding(.bottom, 18)
-        .background {
-            RoundedRectangle(cornerRadius: 34, style: .continuous)
-                .fill(.clear)
-                .glassEffect(
-                    .regular.tint(Color.white.opacity(0.1)),
-                    in: RoundedRectangle(cornerRadius: 34, style: .continuous)
-                )
-        }
-        .overlay {
-            RoundedRectangle(cornerRadius: 34, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.22), lineWidth: 1)
-        }
-        .shadow(color: .black.opacity(0.24), radius: 28, y: 14)
-    }
 
-    private var transportControls: some View {
-        HStack(spacing: 34) {
-            Button {
-                engine.previousSentence()
-            } label: {
-                Image(systemName: "backward.fill")
-                    .font(.system(size: 31, weight: .semibold))
-                    .frame(width: 50, height: 50)
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(!engine.hasContent || engine.isAtStart ? .tertiary : .primary)
-            .disabled(!engine.hasContent || engine.isAtStart)
-
-            Button {
-                engine.toggle()
-            } label: {
-                ZStack {
-                    Circle()
-                        .fill(.white.opacity(0.95))
-                        .frame(width: 78, height: 78)
-                    Image(systemName: engine.isPlaying ? "pause.fill" : "play.fill")
-                        .font(.system(size: 30, weight: .bold))
-                        .foregroundStyle(.black.opacity(0.86))
-                }
-            }
-            .buttonStyle(.plain)
-            .disabled(!engine.hasContent)
-
-            Button {
-                engine.nextSentence()
-            } label: {
-                Image(systemName: "forward.fill")
-                    .font(.system(size: 31, weight: .semibold))
-                    .frame(width: 50, height: 50)
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(engine.isAtEnd ? .tertiary : .primary)
-            .disabled(engine.isAtEnd)
-        }
-    }
-
-    private var tempoStrip: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "tortoise.fill")
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(.secondary)
-                .frame(width: 20)
-
-            Slider(
+            // Progress bar
+            ProgressSlider(
                 value: Binding(
-                    get: { Double(engine.wordsPerMinute) },
-                    set: { engine.wordsPerMinute = Int($0.rounded()) }
+                    get: { engine.displayedProgress },
+                    set: { engine.seekToProgress($0) }
                 ),
-                in: Double(RSVPEngine.minWPM)...Double(RSVPEngine.maxWPM),
-                step: 25
+                isPlaying: engine.isPlaying
             )
-            .tint(.white)
 
-            Image(systemName: "hare.fill")
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(.secondary)
-                .frame(width: 20)
+            // Playback controls - streamlined 3-button layout
+            HStack(spacing: 20) {
+                // Back: tap = previous sentence, hold = continuous rewind
+                HoldableButton(
+                    icon: "backward.fill",
+                    onTap: { engine.previousSentence() },
+                    onHoldTick: { engine.previousSentence() },
+                    disabled: !engine.hasContent || engine.isAtStart,
+                    size: controlButtonSize
+                )
 
-            Text("\(engine.wordsPerMinute)")
-                .font(AppFont.semibold(size: 13))
-                .monospacedDigit()
-                .frame(minWidth: 44, alignment: .trailing)
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    private var secondaryControlRow: some View {
-        HStack(spacing: 16) {
-            Button {
-                showingBookmarks = true
-            } label: {
-                Label("Bookmarks", systemImage: book.bookmarks.isEmpty ? "bookmark" : "bookmark.fill")
-            }
-
-            if book.hasChapters {
-                Button {
-                    showingChapters = true
-                } label: {
-                    Label("Chapters", systemImage: "list.bullet.indent")
-                }
-            }
-
-            Button {
-                showingSettings = true
-            } label: {
-                Label("Settings", systemImage: "gear")
-            }
-        }
-        .font(AppFont.caption)
-        .foregroundStyle(.secondary)
-        .labelStyle(.iconOnly)
-        .frame(maxWidth: .infinity)
-        .overlay(alignment: .leading) {
-            Text(chapterWordPositionText)
-                .font(AppFont.caption2)
-                .foregroundStyle(.tertiary)
-                .monospacedDigit()
-        }
-        .overlay(alignment: .trailing) {
-            Text(statusText)
-                .font(AppFont.caption2)
-                .foregroundStyle(.tertiary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-        }
-    }
-
-    private var nowPlayingHeader: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack(alignment: .top, spacing: 10) {
-                Text(chapterContext.title)
-                    .font(AppFont.semibold(size: 24))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-
-                Spacer(minLength: 0)
+                    // Play/Pause - larger, prominent
+                HoldableButton(
+                    icon: engine.isPlaying ? "pause.fill" : "play.fill",
+                    onTap: { engine.toggle() },
+                    onHoldTick: { }, // No hold action for play/pause
+                    disabled: !engine.hasContent,
+                    size: playButtonSize,
+                    iconFont: .title,
+                    accentedBackground: true
+                )
                 
-                Text(chapterProgressPercentText)
-                    .font(AppFont.semibold(size: 15))
-                    .foregroundStyle(.secondary.opacity(0.9))
+                // Forward: tap = next sentence, hold = continuous forward
+                HoldableButton(
+                    icon: "forward.fill",
+                    onTap: { engine.nextSentence() },
+                    onHoldTick: { engine.nextSentence() },
+                    disabled: engine.isAtEnd,
+                    size: controlButtonSize
+                )
             }
 
-            Text(nowPlayingSubtitle)
-                .font(AppFont.subheadline)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-
-            Label(playbackMode.title, systemImage: playbackMode.icon)
-                .font(AppFont.caption)
-                .foregroundStyle(.tertiary)
-
-            if let timeRemaining = timeRemainingText {
-                Text(timeRemaining)
-                    .font(AppFont.caption)
-                    .foregroundStyle(.tertiary)
-            }
-        }
-    }
-
-    private var nowPlayingSubtitle: String {
-        if let author = book.author, !author.isEmpty {
-            return "\(book.title) - \(author)"
-        }
-        return book.title
-    }
-
-    private var orderedChapters: [Chapter] {
-        book.chapters.flattened.sorted { lhs, rhs in
-            if lhs.startWordIndex == rhs.startWordIndex {
-                return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
-            }
-            return lhs.startWordIndex < rhs.startWordIndex
-        }
-    }
-
-    private var chapterContext: ChapterPlaybackContext {
-        let total = engine.totalWords
-        guard total > 0 else {
-            return ChapterPlaybackContext(title: "Whole Book", startWordIndex: 0, endWordIndexExclusive: 1)
-        }
-
-        guard let chapter = book.chapters.currentChapter(for: engine.currentIndex) else {
-            return ChapterPlaybackContext(
-                title: "Whole Book",
-                startWordIndex: 0,
-                endWordIndexExclusive: total
-            )
-        }
-
-        let start = min(max(chapter.startWordIndex, 0), max(0, total - 1))
-        let nextStart = orderedChapters
-            .map(\.startWordIndex)
-            .first(where: { $0 > start }) ?? total
-        let end = max(start + 1, min(total, nextStart))
-        let title = chapter.title.isEmpty ? "Current Chapter" : chapter.title
-
-        return ChapterPlaybackContext(title: title, startWordIndex: start, endWordIndexExclusive: end)
-    }
-
-    private var chapterConsumedWords: Int {
-        let context = chapterContext
-        let localConsumed = (engine.currentIndex - context.startWordIndex) + engine.currentDisplayWordCount
-        return min(context.wordCount, max(0, localConsumed))
-    }
-
-    private var chapterRemainingWords: Int {
-        max(0, chapterContext.wordCount - chapterConsumedWords)
-    }
-
-    private var chapterProgress: Double {
-        guard chapterContext.wordCount > 0 else { return 0 }
-        return Double(chapterConsumedWords) / Double(chapterContext.wordCount)
-    }
-
-    private var chapterProgressPercentText: String {
-        let percent = min(100, max(0, Int(chapterProgress * 100)))
-        return "\(percent)%"
-    }
-
-    private var chapterWordPositionText: String {
-        let displayStart = min(max(chapterConsumedWords, 1), chapterContext.wordCount)
-        return "\(displayStart)/\(chapterContext.wordCount)"
-    }
-
-    private var chapterElapsedLabel: String {
-        formattedDuration(forWordCount: chapterConsumedWords)
-    }
-
-    private var chapterRemainingLabel: String {
-        "-" + formattedDuration(forWordCount: chapterRemainingWords)
-    }
-
-    private func seekWithinCurrentChapter(to progress: Double) {
-        guard engine.totalWords > 0 else { return }
-        let context = chapterContext
-        let clampedProgress = min(max(progress, 0), 1)
-        let maxOffset = max(0, context.wordCount - 1)
-        let offset = Int((Double(maxOffset) * clampedProgress).rounded(.toNearestOrAwayFromZero))
-        let targetIndex = min(context.endWordIndexExclusive - 1, context.startWordIndex + offset)
-        engine.seek(to: targetIndex)
-    }
-
-    private func formattedDuration(forWordCount wordCount: Int) -> String {
-        guard engine.wordsPerMinute > 0 else { return "0:00" }
-        let totalSeconds = Int((Double(wordCount) / Double(engine.wordsPerMinute)) * 60.0)
-        return formattedDuration(seconds: totalSeconds)
-    }
-
-    private func formattedDuration(seconds: Int) -> String {
-        let clamped = max(0, seconds)
-        let hours = clamped / 3600
-        let minutes = (clamped % 3600) / 60
-        let secs = clamped % 60
-
-        if hours > 0 {
-            return "\(hours):\(twoDigit(minutes)):\(twoDigit(secs))"
-        }
-        return "\(minutes):\(twoDigit(secs))"
-    }
-
-    private func twoDigit(_ value: Int) -> String {
-        value < 10 ? "0\(value)" : "\(value)"
-    }
-
-    private struct ChapterPlaybackContext {
-        let title: String
-        let startWordIndex: Int
-        let endWordIndexExclusive: Int
-
-        var wordCount: Int {
-            max(1, endWordIndexExclusive - startWordIndex)
+            // WPM control with glass
+            WPMControl(wpm: $engine.wordsPerMinute)
         }
     }
 
@@ -647,7 +310,6 @@ struct RSVPView: View {
         engine.load(words: book.words)
         engine.wordsPerMinute = defaultWPM
         engine.pauseOnPunctuation = pauseOnPunctuation
-        engine.setPlaybackMode(playbackMode)
         engine.setWordsPerChunk(wordDisplayMode.wordsPerChunk)
 
         // Resume from saved position
@@ -705,25 +367,7 @@ struct RSVPView: View {
         WordDisplayMode(rawValue: wordDisplayModeRaw) ?? WordDisplayMode.singleWord
     }
 
-    private var playbackMode: ReaderPlaybackMode {
-        ReaderPlaybackMode(rawValue: playbackModeRaw) ?? ReaderPlaybackMode.rsvp
-    }
-
-    private var transcriptHeadline: String {
-        let transcript = engine.currentTranscriptLine.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !transcript.isEmpty {
-            return transcript
-        }
-        return "Tap play to start listening"
-    }
-
-    private func togglePlaybackMode() {
-        let nextMode: ReaderPlaybackMode = playbackMode == .audioTranscription ? .rsvp : .audioTranscription
-        playbackModeRaw = nextMode.rawValue
-    }
-
     private func toggleChunkMode() {
-        guard playbackMode == .rsvp else { return }
         wordDisplayModeRaw = (
             wordDisplayMode == .threeWordChunk ? WordDisplayMode.singleWord : WordDisplayMode.threeWordChunk
         ).rawValue
@@ -740,7 +384,6 @@ struct RSVPView: View {
             .background(.ultraThinMaterial, in: Capsule())
     }
 }
-// swiftlint:enable type_body_length
 
 struct WPMControl: View {
     @Binding var wpm: Int
@@ -985,15 +628,7 @@ struct ReadingModeSelector: View {
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
-        .background {
-            Capsule()
-                .fill(.clear)
-                .glassEffect(.regular, in: Capsule())
-        }
-        .overlay {
-            Capsule()
-                .strokeBorder(.white.opacity(0.16), lineWidth: 1)
-        }
+        .background(.regularMaterial, in: Capsule())
     }
 }
 
@@ -1019,7 +654,7 @@ struct ModeButton: View {
             .background {
                 if isSelected {
                     Capsule()
-                        .fill(.white.opacity(0.22))
+                        .fill(Color.accentColor.opacity(0.2))
                 }
             }
         }
