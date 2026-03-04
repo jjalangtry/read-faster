@@ -47,7 +47,7 @@ Any file importing SwiftUI, SwiftData, PDFKit, Vision, Combine, AppKit, or UIKit
 
 The app version follows **semver** (`major.minor.patch`). The source of truth is `MARKETING_VERSION` in `project.yml`.
 
-Xcode Cloud auto-bumps the version on every build using `ci_scripts/ci_post_clone.sh`. The bump level is determined by the **commit message** of the push to `main`:
+Xcode Cloud auto-bumps the version on every build using `ci_scripts/ci_post_clone.sh`. The bump level is determined by the **commit subject line** (first line only, not the body) of the push to `main`:
 
 | Tag in commit message | Bump | Example |
 |---|---|---|
@@ -57,7 +57,7 @@ Xcode Cloud auto-bumps the version on every build using `ci_scripts/ci_post_clon
 
 **Do not manually edit version numbers** in `project.yml` or `project.pbxproj` — the CI script handles it. The `CURRENT_PROJECT_VERSION` (build number) is set to the Xcode Cloud `CI_BUILD_NUMBER` automatically.
 
-When writing commit messages, include `[minor]` or `[major]` if the change warrants it. Most commits should bump patch (no tag needed).
+When writing commit messages, include `[minor]` or `[major]` in the **subject line** (first line) if the change warrants it. Never put these tags in the commit body — only the subject is checked. Most commits should bump patch (no tag needed).
 
 ### Full build (macOS only)
 

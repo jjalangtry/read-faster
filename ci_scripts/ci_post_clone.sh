@@ -27,15 +27,15 @@ MAJOR=${MAJOR:-0}
 MINOR=${MINOR:-0}
 PATCH=${PATCH:-0}
 
-COMMIT_MSG=$(git -C "$REPO_ROOT" log -1 --pretty=%B)
-echo "Commit message: $COMMIT_MSG"
+COMMIT_SUBJECT=$(git -C "$REPO_ROOT" log -1 --pretty=%s)
+echo "Commit subject: $COMMIT_SUBJECT"
 
-if echo "$COMMIT_MSG" | grep -qi '\[major\]'; then
+if echo "$COMMIT_SUBJECT" | grep -qi '\[major\]'; then
     MAJOR=$((MAJOR + 1))
     MINOR=0
     PATCH=0
     echo "Bumping MAJOR"
-elif echo "$COMMIT_MSG" | grep -qi '\[minor\]'; then
+elif echo "$COMMIT_SUBJECT" | grep -qi '\[minor\]'; then
     MINOR=$((MINOR + 1))
     PATCH=0
     echo "Bumping MINOR"
