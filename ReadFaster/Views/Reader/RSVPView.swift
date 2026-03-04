@@ -9,7 +9,6 @@ struct RSVPView: View {
 
     @StateObject private var engine = RSVPEngine()
     @State private var showingBookmarks = false
-    @State private var showingChapters = false
     @State private var showingSettings = false
     @State private var controlsVisible = true
     @State private var hideControlsTask: Task<Void, Never>?
@@ -47,10 +46,6 @@ struct RSVPView: View {
         .toolbar { toolbarContent }
         .sheet(isPresented: $showingBookmarks) {
             BookmarksSheet(book: book, engine: engine) { addBookmark() }
-                .presentationDetents([.medium, .large])
-        }
-        .sheet(isPresented: $showingChapters) {
-            ChaptersSheet(book: book, engine: engine)
                 .presentationDetents([.medium, .large])
         }
         .sheet(isPresented: $showingSettings) {
@@ -128,23 +123,20 @@ struct RSVPView: View {
 
     @ViewBuilder
     private func landscapeLayout(geometry: GeometryProxy) -> some View {
-        HStack(spacing: 20) {
-            VStack {
-                Spacer()
-                rsvpHero(geometry: geometry)
-                Spacer()
-            }
-            .frame(maxWidth: geometry.size.width * 0.5)
+        HStack(alignment: .center, spacing: 20) {
+            rsvpHero(geometry: geometry)
+                .frame(
+                    maxWidth: geometry.size.width * 0.48,
+                    maxHeight: .infinity
+                )
 
-            VStack(spacing: 0) {
-                Spacer(minLength: 4)
+            ScrollView(.vertical, showsIndicators: false) {
                 controlStack(geometry: geometry)
-                Spacer(minLength: 4)
+                    .padding(.vertical, 8)
             }
-            .frame(maxWidth: geometry.size.width * 0.45)
+            .frame(maxWidth: geometry.size.width * 0.48)
         }
         .padding(.horizontal, 20)
-        .padding(.vertical, 8)
     }
 
     // MARK: - Toolbar (… overflow menu)
@@ -161,14 +153,6 @@ struct RSVPView: View {
                         systemImage: book.bookmarks.isEmpty
                             ? "bookmark" : "bookmark.fill"
                     )
-                }
-
-                if book.hasChapters {
-                    Button {
-                        showingChapters = true
-                    } label: {
-                        Label("Chapters", systemImage: "list.bullet.indent")
-                    }
                 }
 
                 Button {
@@ -240,7 +224,7 @@ struct RSVPView: View {
         let maxW = min(geometry.size.width - 48, 500.0)
 
         VStack(spacing: 0) {
-            titleBlock
+            titleRow
                 .frame(maxWidth: maxW, alignment: .leading)
                 .opacity(controlsOpacity)
                 .padding(.bottom, 14)
@@ -249,7 +233,7 @@ struct RSVPView: View {
                 .frame(maxWidth: maxW)
                 .opacity(controlsOpacity)
 
-            timeRow
+            metadataRow
                 .frame(maxWidth: maxW)
                 .opacity(controlsOpacity)
                 .padding(.bottom, 18)
@@ -263,26 +247,72 @@ struct RSVPView: View {
                 .opacity(controlsOpacity)
                 .padding(.bottom, 12)
 
-            modeBar
-                .opacity(controlsOpacity)
+            DisplayModeBar(
+                wordDisplayModeRaw: $wordDisplayModeRaw,
+                showContext: $engine.showSentenceContext
+            )
+            .opacity(controlsOpacity)
         }
     }
 
-    // MARK: - Title Block
+    // MARK: - Title Row (title + author + chapter picker)
 
-    private var titleBlock: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(book.title)
-                .font(.system(size: 21, weight: .bold))
-                .lineLimit(1)
-
-            if let author = book.author, !author.isEmpty {
-                Text(author)
-                    .font(.system(size: 21, weight: .regular))
+    private var titleRow: some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(book.title)
+                    .font(.system(size: 21, weight: .bold))
                     .lineLimit(1)
-                    .foregroundStyle(Color.accentColor)
+
+                if let author = book.author, !author.isEmpty {
+                    Text(author)
+                        .font(.system(size: 21, weight: .regular))
+                        .lineLimit(1)
+                        .foregroundStyle(Color.accentColor)
+                }
+            }
+
+            Spacer(minLength: 8)
+
+            if book.hasChapters {
+                chapterPicker
             }
         }
+    }
+
+    // MARK: - Chapter Picker
+
+    private var chapterPicker: some View {
+        Menu {
+            ForEach(book.chapters.flattened) { chapter in
+                Button {
+                    engine.seek(to: chapter.startWordIndex)
+                } label: {
+                    HStack {
+                        Text(chapter.title)
+                        Spacer()
+                        Text(chapterProgress(chapter))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "list.bullet")
+                    .font(.system(size: 13, weight: .medium))
+                if let chapter = currentChapter {
+                    Text(chapter.title)
+                        .font(.system(size: 13, weight: .medium))
+                        .lineLimit(1)
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .glassEffect(.regular.interactive(), in: .capsule)
+        }
+        #if os(iOS)
+        .sensoryFeedback(.selection, trigger: currentChapter?.id)
+        #endif
     }
 
     // MARK: - Scrub Bar
@@ -306,14 +336,26 @@ struct RSVPView: View {
         .tint(.primary)
     }
 
-    // MARK: - Time Row
+    // MARK: - Metadata Row (time + chapter info inline)
 
-    private var timeRow: some View {
-        HStack {
+    private var metadataRow: some View {
+        HStack(spacing: 0) {
             Text(elapsedPositionText)
                 .font(.system(size: 11, weight: .medium, design: .monospaced))
                 .foregroundStyle(.secondary)
-            Spacer()
+
+            if let chapter = currentChapter {
+                Text("  ·  ")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.tertiary)
+                Text(chapter.title)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 8)
+
             Text(timeRemainingText ?? "")
                 .font(.system(size: 11, weight: .medium, design: .monospaced))
                 .foregroundStyle(.secondary)
@@ -347,15 +389,6 @@ struct RSVPView: View {
                 Spacer()
             }
         }
-    }
-
-    // MARK: - Mode Bar (display + context toggles)
-
-    private var modeBar: some View {
-        DisplayModeBar(
-            wordDisplayModeRaw: $wordDisplayModeRaw,
-            showContext: $engine.showSentenceContext
-        )
     }
 }
 
@@ -410,6 +443,29 @@ extension RSVPView {
             }
     }
     #endif
+}
+
+// MARK: - Chapter Helpers
+
+extension RSVPView {
+    var currentChapter: Chapter? {
+        book.chapters.currentChapter(for: engine.currentIndex)
+    }
+
+    func chapterProgress(_ chapter: Chapter) -> String {
+        let allFlat = book.chapters.flattened
+        guard let idx = allFlat.firstIndex(where: { $0.id == chapter.id })
+        else { return "" }
+
+        let chStart = chapter.startWordIndex
+        let chEnd = idx + 1 < allFlat.count
+            ? allFlat[idx + 1].startWordIndex
+            : engine.totalWords
+        let chLength = max(1, chEnd - chStart)
+        let read = max(0, min(engine.currentIndex - chStart, chLength))
+        let pct = Int(Double(read) / Double(chLength) * 100)
+        return "\(max(0, min(100, pct)))%"
+    }
 }
 
 // MARK: - Text Helpers & Engine Setup
