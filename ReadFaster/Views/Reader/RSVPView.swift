@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 
-// swiftlint:disable type_body_length
+// swiftlint:disable type_body_length file_length
 struct RSVPView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -17,6 +17,7 @@ struct RSVPView: View {
     @AppStorage("defaultWPM") private var defaultWPM: Int = 300
     @AppStorage("pauseOnPunctuation") private var pauseOnPunctuation: Bool = true
     @AppStorage("readerWordDisplayMode") private var wordDisplayModeRaw = WordDisplayMode.singleWord.rawValue
+    @AppStorage("readerPlaybackMode") private var playbackModeRaw = ReaderPlaybackMode.rsvp.rawValue
 
     var body: some View {
         GeometryReader { geometry in
@@ -45,11 +46,19 @@ struct RSVPView: View {
             ToolbarItem(placement: .primaryAction) {
                 HStack(spacing: 8) {
                     Button {
+                        togglePlaybackMode()
+                    } label: {
+                        Image(systemName: playbackMode == .audioTranscription ? "waveform.badge.mic" : "waveform")
+                    }
+                    .help(playbackMode == .audioTranscription ? "Switch to RSVP mode" : "Switch to listen mode")
+
+                    Button {
                         toggleChunkMode()
                     } label: {
                         Image(systemName: wordDisplayMode == .threeWordChunk ? "text.justify" : "text.justify.left")
                     }
                     .help(wordDisplayMode == .threeWordChunk ? "Switch to one-word mode" : "Switch to three-word mode")
+                    .disabled(playbackMode == .audioTranscription)
 
                     Button {
                         showingBookmarks = true
@@ -102,6 +111,16 @@ struct RSVPView: View {
                 engine.setWordsPerChunk(mode.wordsPerChunk)
             }
         }
+        .onChange(of: playbackModeRaw) { _, rawValue in
+            let mode = ReaderPlaybackMode(rawValue: rawValue) ?? ReaderPlaybackMode.rsvp
+            guard mode.rawValue == rawValue else {
+                playbackModeRaw = mode.rawValue
+                return
+            }
+            Task { @MainActor in
+                engine.setPlaybackMode(mode)
+            }
+        }
         .onChange(of: pauseOnPunctuation) { _, newValue in
             engine.pauseOnPunctuation = newValue
         }
@@ -151,6 +170,10 @@ struct RSVPView: View {
         }
         .onKeyPress("3") {
             toggleChunkMode()
+            return .handled
+        }
+        .onKeyPress("a") {
+            togglePlaybackMode()
             return .handled
         }
         .focusable()
@@ -205,15 +228,19 @@ struct RSVPView: View {
 
                 VStack(spacing: 12) {
                     Spacer(minLength: 18)
-
-                    WordDisplay(
-                        word: engine.currentWord,
-                        usesChunkLayout: wordDisplayMode == .threeWordChunk
-                    )
-                    .frame(maxWidth: min(geometry.size.width * 0.86, 640))
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        engine.toggle()
+                    if playbackMode == .audioTranscription {
+                        transcriptHeroView
+                            .frame(maxWidth: min(geometry.size.width * 0.82, 680))
+                    } else {
+                        WordDisplay(
+                            word: engine.currentWord,
+                            usesChunkLayout: wordDisplayMode == .threeWordChunk
+                        )
+                        .frame(maxWidth: min(geometry.size.width * 0.86, 640))
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            engine.toggle()
+                        }
                     }
 
                     Spacer(minLength: 10)
@@ -248,6 +275,30 @@ struct RSVPView: View {
                         )
                 }
             }
+        }
+    }
+
+    private var transcriptHeroView: some View {
+        VStack(spacing: 14) {
+            Image(systemName: "waveform.and.mic")
+                .font(.system(size: 28, weight: .semibold))
+                .foregroundStyle(.secondary)
+
+            Text(transcriptHeadline)
+                .font(AppFont.semibold(size: 30))
+                .multilineTextAlignment(.center)
+                .lineLimit(4)
+                .minimumScaleFactor(0.7)
+
+            Text(playbackMode.subtitle)
+                .font(AppFont.footnote)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(.horizontal, 12)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            engine.toggle()
         }
     }
 
@@ -430,6 +481,10 @@ struct RSVPView: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
 
+            Label(playbackMode.title, systemImage: playbackMode.icon)
+                .font(AppFont.caption)
+                .foregroundStyle(.tertiary)
+
             if let timeRemaining = timeRemainingText {
                 Text(timeRemaining)
                     .font(AppFont.caption)
@@ -592,6 +647,7 @@ struct RSVPView: View {
         engine.load(words: book.words)
         engine.wordsPerMinute = defaultWPM
         engine.pauseOnPunctuation = pauseOnPunctuation
+        engine.setPlaybackMode(playbackMode)
         engine.setWordsPerChunk(wordDisplayMode.wordsPerChunk)
 
         // Resume from saved position
@@ -649,7 +705,25 @@ struct RSVPView: View {
         WordDisplayMode(rawValue: wordDisplayModeRaw) ?? WordDisplayMode.singleWord
     }
 
+    private var playbackMode: ReaderPlaybackMode {
+        ReaderPlaybackMode(rawValue: playbackModeRaw) ?? ReaderPlaybackMode.rsvp
+    }
+
+    private var transcriptHeadline: String {
+        let transcript = engine.currentTranscriptLine.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !transcript.isEmpty {
+            return transcript
+        }
+        return "Tap play to start listening"
+    }
+
+    private func togglePlaybackMode() {
+        let nextMode: ReaderPlaybackMode = playbackMode == .audioTranscription ? .rsvp : .audioTranscription
+        playbackModeRaw = nextMode.rawValue
+    }
+
     private func toggleChunkMode() {
+        guard playbackMode == .rsvp else { return }
         wordDisplayModeRaw = (
             wordDisplayMode == .threeWordChunk ? WordDisplayMode.singleWord : WordDisplayMode.threeWordChunk
         ).rawValue

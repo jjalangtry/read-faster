@@ -38,4 +38,12 @@ final class ReadingModeTests: XCTestCase {
         XCTAssertEqual(ReadingMode.normal.icon, "figure.walk")
         XCTAssertEqual(ReadingMode.study.icon, "book")
     }
+
+    func testReaderPlaybackModesAreStable() {
+        XCTAssertEqual(ReaderPlaybackMode.allCases.count, 2)
+        XCTAssertEqual(ReaderPlaybackMode.rsvp.title, "RSVP")
+        XCTAssertEqual(ReaderPlaybackMode.audioTranscription.title, "Listen & Transcript")
+        XCTAssertEqual(ReaderPlaybackMode.rsvp.icon, "text.redaction")
+        XCTAssertEqual(ReaderPlaybackMode.audioTranscription.icon, "waveform")
+    }
 }

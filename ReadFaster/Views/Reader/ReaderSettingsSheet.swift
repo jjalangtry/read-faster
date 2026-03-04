@@ -7,11 +7,13 @@ struct ReaderSettingsSheet: View {
     @AppStorage("fontSize") private var fontSize: Double = 48
     @AppStorage("pauseOnPunctuation") private var pauseOnPunctuation: Bool = true
     @AppStorage("readerWordDisplayMode") private var wordDisplayModeRaw = WordDisplayMode.singleWord.rawValue
+    @AppStorage("readerPlaybackMode") private var playbackModeRaw = ReaderPlaybackMode.rsvp.rawValue
 
     var body: some View {
         NavigationStack {
             Form {
                 displaySection
+                playbackSection
                 timingSection
                 speedPresetsSection
             }
@@ -30,6 +32,19 @@ struct ReaderSettingsSheet: View {
         #if os(macOS)
         .frame(minWidth: 400, minHeight: 400)
         #endif
+        .onAppear {
+            engine.setPlaybackMode(playbackMode)
+        }
+        .onChange(of: playbackModeRaw) { _, rawValue in
+            let mode = ReaderPlaybackMode(rawValue: rawValue) ?? ReaderPlaybackMode.rsvp
+            if mode.rawValue != rawValue {
+                playbackModeRaw = mode.rawValue
+                return
+            }
+            Task { @MainActor in
+                engine.setPlaybackMode(mode)
+            }
+        }
     }
 
     private var displaySection: some View {
@@ -45,11 +60,15 @@ struct ReaderSettingsSheet: View {
                 }
             }
             .pickerStyle(.menu)
+            .disabled(playbackMode == .audioTranscription)
 
             Toggle("Show Sentence Context", isOn: $engine.showSentenceContext)
 
             VStack(spacing: 8) {
-                if wordDisplayMode == .threeWordChunk {
+                if playbackMode == .audioTranscription {
+                    Text("Listen mode active")
+                        .font(AppFont.rsvpPhrase(size: max(24, fontSize * 0.52)))
+                } else if wordDisplayMode == .threeWordChunk {
                     Text("the quick brown")
                         .font(AppFont.rsvpPhrase(size: max(24, fontSize * 0.62)))
                 } else {
@@ -61,7 +80,27 @@ struct ReaderSettingsSheet: View {
             .padding(.vertical, 12)
             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
 
-            Text(wordDisplayMode.subtitle)
+            Text(
+                playbackMode == .audioTranscription
+                    ? "Word chunk display is disabled while listen mode is active."
+                    : wordDisplayMode.subtitle
+            )
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var playbackSection: some View {
+        Section("Playback") {
+            Picker("Playback Experience", selection: $playbackModeRaw) {
+                ForEach(ReaderPlaybackMode.allCases) { mode in
+                    Label(mode.title, systemImage: mode.icon)
+                        .tag(mode.rawValue)
+                }
+            }
+            .pickerStyle(.menu)
+
+            Text(playbackMode.subtitle)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -91,6 +130,10 @@ struct ReaderSettingsSheet: View {
 
     private var wordDisplayMode: WordDisplayMode {
         WordDisplayMode(rawValue: wordDisplayModeRaw) ?? WordDisplayMode.singleWord
+    }
+
+    private var playbackMode: ReaderPlaybackMode {
+        ReaderPlaybackMode(rawValue: playbackModeRaw) ?? ReaderPlaybackMode.rsvp
     }
 }
 
