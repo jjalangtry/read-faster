@@ -260,7 +260,7 @@ struct RSVPView: View {
                 Text(author)
                     .font(.system(size: 21, weight: .regular))
                     .lineLimit(1)
-                    .foregroundStyle(.accentColor)
+                    .foregroundStyle(Color.accentColor)
             }
         }
     }
