@@ -24,11 +24,7 @@ struct WordDisplay: View {
         .padding(.horizontal, 28)
         .padding(.vertical, 44)
         .frame(minHeight: 180)
-        .background {
-            RoundedRectangle(cornerRadius: 28)
-                .fill(.clear)
-                .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 28))
-        }
+        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 28))
         .accessibilityElement()
         .accessibilityLabel(word)
         .accessibilityHint(usesChunkLayout
