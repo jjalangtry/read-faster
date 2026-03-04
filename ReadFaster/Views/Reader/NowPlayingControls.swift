@@ -43,12 +43,31 @@ struct TransportButton: View {
     }
 }
 
+// MARK: - Speed Presets
+
+private struct SpeedPreset {
+    let wpm: Int
+    let icon: String
+    let label: String
+}
+
+private let speedPresets: [SpeedPreset] = [
+    SpeedPreset(wpm: 200, icon: "tortoise.fill", label: "Slow"),
+    SpeedPreset(wpm: 350, icon: "figure.walk", label: "Normal"),
+    SpeedPreset(wpm: 500, icon: "hare.fill", label: "Fast"),
+    SpeedPreset(wpm: 700, icon: "bolt.fill", label: "Rapid"),
+    SpeedPreset(wpm: 1000, icon: "flame.fill", label: "Max")
+]
+
+private let snapThreshold = 30
+
 // MARK: - WPM Control
 
 struct WPMControl: View {
     @Binding var wpm: Int
     @State private var isExpanded = false
     @State private var sliderValue: Double = 300
+    @State private var lastSnappedPreset: Int?
 
     private let step = 25
 
@@ -66,77 +85,148 @@ struct WPMControl: View {
         )
     }
 
+    // MARK: Compact (single glass card)
+
     private var compactStepper: some View {
-        HStack(spacing: 4) {
-            Button {
-                adjustWPM(by: -step)
-            } label: {
+        HStack(spacing: 0) {
+            Button { adjustWPM(by: -step) } label: {
                 Image(systemName: "minus")
                     .font(.subheadline.weight(.semibold))
-                    .frame(width: 36, height: 36)
+                    .foregroundStyle(
+                        wpm <= RSVPEngine.minWPM ? .tertiary : .primary
+                    )
+                    .frame(width: 44, height: 40)
+                    .contentShape(Rectangle())
             }
-            .buttonStyle(.glass)
+            .buttonStyle(.plain)
             .disabled(wpm <= RSVPEngine.minWPM)
-            #if os(iOS)
-            .sensoryFeedback(.selection, trigger: wpm)
-            #endif
 
             Button {
                 sliderValue = Double(wpm)
+                lastSnappedPreset = nil
                 withAnimation { isExpanded = true }
             } label: {
                 Text("\(wpm) WPM")
                     .font(AppFont.semibold(size: 15))
                     .monospacedDigit()
-                    .frame(minWidth: 86, minHeight: 36)
+                    .frame(minWidth: 80, minHeight: 40)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
 
-            Button {
-                adjustWPM(by: step)
-            } label: {
+            Button { adjustWPM(by: step) } label: {
                 Image(systemName: "plus")
                     .font(.subheadline.weight(.semibold))
-                    .frame(width: 36, height: 36)
+                    .foregroundStyle(
+                        wpm >= RSVPEngine.maxWPM ? .tertiary : .primary
+                    )
+                    .frame(width: 44, height: 40)
+                    .contentShape(Rectangle())
             }
-            .buttonStyle(.glass)
+            .buttonStyle(.plain)
             .disabled(wpm >= RSVPEngine.maxWPM)
-            #if os(iOS)
-            .sensoryFeedback(.selection, trigger: wpm)
-            #endif
+        }
+        .padding(.horizontal, 4)
+        .glassEffect(.regular.interactive(), in: .capsule)
+        #if os(iOS)
+        .sensoryFeedback(.selection, trigger: wpm)
+        #endif
+    }
+
+    // MARK: Expanded (slider with preset ticks)
+
+    private var expandedSlider: some View {
+        VStack(spacing: 6) {
+            HStack(spacing: 10) {
+                Button {
+                    withAnimation { isExpanded = false }
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 28, height: 28)
+                        .contentShape(Circle())
+                }
+                .buttonStyle(.plain)
+
+                Slider(
+                    value: $sliderValue,
+                    in: Double(RSVPEngine.minWPM)...Double(RSVPEngine.maxWPM),
+                    step: Double(step)
+                )
+                .onChange(of: sliderValue) { _, newValue in
+                    let rounded = Int(newValue)
+                    wpm = rounded
+                    snapToPresetIfClose(rounded)
+                }
+
+                Text("\(wpm)")
+                    .font(AppFont.semibold(size: 14))
+                    .monospacedDigit()
+                    .frame(width: 38)
+            }
+
+            presetTickMarks
+        }
+        .padding(.horizontal, 14)
+        .padding(.top, 10)
+        .padding(.bottom, 8)
+        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 20))
+        #if os(iOS)
+        .sensoryFeedback(.selection, trigger: lastSnappedPreset)
+        #endif
+    }
+
+    private var presetTickMarks: some View {
+        HStack {
+            ForEach(Array(speedPresets.enumerated()), id: \.offset) { _, preset in
+                Spacer()
+                presetTick(preset)
+                Spacer()
+            }
         }
     }
 
-    private var expandedSlider: some View {
-        HStack(spacing: 12) {
-            Button {
-                withAnimation { isExpanded = false }
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.subheadline.weight(.semibold))
-                    .frame(width: 32, height: 32)
-            }
-            .buttonStyle(.glass)
+    private func presetTick(_ preset: SpeedPreset) -> some View {
+        Button {
+            sliderValue = Double(preset.wpm)
+            wpm = preset.wpm
+            lastSnappedPreset = preset.wpm
+        } label: {
+            VStack(spacing: 2) {
+                Circle()
+                    .fill(
+                        isNearPreset(preset.wpm)
+                            ? Color.accentColor
+                            : Color.secondary.opacity(0.3)
+                    )
+                    .frame(width: 5, height: 5)
 
-            Slider(
-                value: $sliderValue,
-                in: Double(RSVPEngine.minWPM)...Double(RSVPEngine.maxWPM),
-                step: Double(step)
-            )
-            .frame(minWidth: 120, maxWidth: 220)
-            .onChange(of: sliderValue) { _, newValue in
-                wpm = Int(newValue)
+                Image(systemName: preset.icon)
+                    .font(.system(size: 10))
+                    .foregroundStyle(
+                        isNearPreset(preset.wpm)
+                            ? Color.accentColor : .secondary
+                    )
             }
-
-            Text("\(Int(sliderValue))")
-                .font(AppFont.semibold(size: 15))
-                .monospacedDigit()
-                .frame(width: 44)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .glassEffect(.regular, in: .capsule)
+        .buttonStyle(.plain)
+    }
+
+    private func isNearPreset(_ presetWPM: Int) -> Bool {
+        abs(wpm - presetWPM) <= snapThreshold
+    }
+
+    private func snapToPresetIfClose(_ value: Int) {
+        for preset in speedPresets where abs(value - preset.wpm) <= snapThreshold {
+            if lastSnappedPreset != preset.wpm {
+                lastSnappedPreset = preset.wpm
+                sliderValue = Double(preset.wpm)
+                wpm = preset.wpm
+            }
+            return
+        }
+        lastSnappedPreset = nil
     }
 
     private func adjustWPM(by delta: Int) {
@@ -219,47 +309,5 @@ struct DisplayModeBar: View {
             }
         }
         .buttonStyle(.plain)
-    }
-}
-
-// MARK: - Reading Mode Selector
-
-struct ReadingModeSelector: View {
-    let currentMode: ReadingMode
-    let onModeChange: (ReadingMode) -> Void
-
-    var body: some View {
-        HStack(spacing: 4) {
-            ForEach(ReadingMode.allCases) { mode in
-                Button {
-                    onModeChange(mode)
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: mode.icon)
-                            .font(.system(size: 11, weight: .medium))
-                        Text(mode.displayName)
-                            .font(.system(size: 12, weight: .medium))
-                    }
-                    .foregroundStyle(
-                        mode == currentMode ? .primary : .secondary
-                    )
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background {
-                        if mode == currentMode {
-                            Capsule()
-                                .fill(Color.accentColor.opacity(0.18))
-                        }
-                    }
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 4)
-        .glassEffect(.regular, in: .capsule)
-        #if os(iOS)
-        .sensoryFeedback(.selection, trigger: currentMode)
-        #endif
     }
 }

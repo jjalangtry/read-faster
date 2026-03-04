@@ -345,19 +345,13 @@ struct RSVPView: View {
         }
     }
 
-    // MARK: - Mode Bar (display + context + speed)
+    // MARK: - Mode Bar (display + context toggles)
 
     private var modeBar: some View {
-        VStack(spacing: 8) {
-            DisplayModeBar(
-                wordDisplayModeRaw: $wordDisplayModeRaw,
-                showContext: $engine.showSentenceContext
-            )
-
-            ReadingModeSelector(currentMode: engine.currentMode) { mode in
-                engine.applyMode(mode)
-            }
-        }
+        DisplayModeBar(
+            wordDisplayModeRaw: $wordDisplayModeRaw,
+            showContext: $engine.showSentenceContext
+        )
     }
 }
 

@@ -5,10 +5,6 @@ struct ControlsView: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            ReadingModeSelector(currentMode: engine.currentMode) { mode in
-                engine.applyMode(mode)
-            }
-
             GlassEffectContainer {
                 HStack(spacing: 24) {
                     Button {

@@ -36,46 +36,26 @@ struct WordDisplay: View {
         }
     }
 
-    // MARK: - Single Word
+    // MARK: - Single Word (no guide lines — glass card is the boundary)
 
     private var singleWordView: some View {
-        VStack(spacing: 14) {
-            focalLine
+        HStack(spacing: 0) {
+            Text(orpWord.before)
+                .foregroundStyle(.primary)
+                .frame(minWidth: 0, maxWidth: .infinity, alignment: .trailing)
 
-            HStack(spacing: 0) {
-                Text(orpWord.before)
-                    .foregroundStyle(.primary)
-                    .frame(minWidth: 0, maxWidth: .infinity, alignment: .trailing)
-
-                if let focal = orpWord.focal {
-                    Text(String(focal))
-                        .foregroundStyle(.red)
-                }
-
-                Text(orpWord.after)
-                    .foregroundStyle(.primary)
-                    .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+            if let focal = orpWord.focal {
+                Text(String(focal))
+                    .foregroundStyle(.red)
             }
-            .font(AppFont.rsvpWord(size: fontSize))
-            .lineLimit(1)
-            .minimumScaleFactor(0.5)
 
-            ZStack {
-                focalLine
-
-                Image(systemName: "triangle.fill")
-                    .font(.system(size: 7))
-                    .foregroundStyle(.red.opacity(0.7))
-                    .rotationEffect(.degrees(180))
-                    .offset(y: -5)
-            }
+            Text(orpWord.after)
+                .foregroundStyle(.primary)
+                .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
         }
-    }
-
-    private var focalLine: some View {
-        Rectangle()
-            .fill(Color.secondary.opacity(0.15))
-            .frame(height: 1)
+        .font(AppFont.rsvpWord(size: fontSize))
+        .lineLimit(1)
+        .minimumScaleFactor(0.5)
     }
 
     // MARK: - Chunk Mode
@@ -108,7 +88,9 @@ struct WordDisplay: View {
     private var chunkDisplayParts: ChunkDisplayParts {
         let words = word.split(whereSeparator: \.isWhitespace).map(String.init)
         guard !words.isEmpty else {
-            return ChunkDisplayParts(before: "", anchor: ORPWord(word: ""), after: "")
+            return ChunkDisplayParts(
+                before: "", anchor: ORPWord(word: ""), after: ""
+            )
         }
         let anchorIndex = words.count >= 2 ? 1 : 0
         let beforeWords = words.prefix(anchorIndex).joined(separator: " ")
@@ -116,7 +98,9 @@ struct WordDisplay: View {
         let anchorWord = ORPWord(word: words[anchorIndex])
         let before = beforeWords.isEmpty ? "" : beforeWords + " "
         let after = afterWords.isEmpty ? "" : " " + afterWords
-        return ChunkDisplayParts(before: before, anchor: anchorWord, after: after)
+        return ChunkDisplayParts(
+            before: before, anchor: anchorWord, after: after
+        )
     }
 
     private struct ChunkDisplayParts {
@@ -136,20 +120,6 @@ struct WordDisplay: View {
         WordDisplay(word: "word")
     }
     .padding()
-}
-
-#Preview("Long word") {
-    VStack(spacing: 40) {
-        WordDisplay(word: "recognition")
-        WordDisplay(word: "extraordinary")
-        WordDisplay(word: "supercalifragilisticexpialidocious")
-    }
-    .padding()
-}
-
-#Preview("Empty") {
-    WordDisplay(word: "")
-        .padding()
 }
 
 #Preview("Phrase mode") {
