@@ -17,39 +17,23 @@ struct RSVPView: View {
     @AppStorage("defaultWPM") private var defaultWPM: Int = 300
     @AppStorage("pauseOnPunctuation") private var pauseOnPunctuation: Bool = true
     @AppStorage("readerWordDisplayMode") private var wordDisplayModeRaw = WordDisplayMode.singleWord.rawValue
-    
-    // Platform-adaptive button sizes (larger on macOS for better click targets)
-    #if os(macOS)
-    private let controlButtonSize: CGFloat = 56
-    private let playButtonSize: CGFloat = 72
-    #else
-    private let controlButtonSize: CGFloat = 52
-    private let playButtonSize: CGFloat = 68
-    #endif
 
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                // Background - allows glass to sample content
-                #if os(macOS)
-                Color(NSColor.windowBackgroundColor)
-                    .ignoresSafeArea()
-                #else
-                Color(UIColor.systemBackground)
-                    .ignoresSafeArea()
-                #endif
+                liquidGlassBackdrop
 
                 VStack(spacing: 0) {
-                    Spacer()
+                    Spacer(minLength: 10)
 
                     wordDisplayArea(geometry: geometry)
+                        .padding(.horizontal, 18)
 
-                    Spacer()
+                    Spacer(minLength: 8)
 
-                    // Floating glass controls at bottom
                     floatingControls
-                        .padding(.horizontal)
-                        .padding(.bottom, 8)
+                        .padding(.horizontal, 14)
+                        .padding(.bottom, max(8, geometry.safeAreaInsets.bottom - 4))
                 }
             }
         }
@@ -177,59 +161,83 @@ struct RSVPView: View {
         #endif
     }
 
+    private var liquidGlassBackdrop: some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color.accentColor.opacity(0.42),
+                    Color.accentColor.opacity(0.2),
+                    Color.black.opacity(0.62)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+
+            RadialGradient(
+                colors: [Color.white.opacity(0.18), .clear],
+                center: .topLeading,
+                startRadius: 18,
+                endRadius: 340
+            )
+            .blendMode(.screen)
+
+            RadialGradient(
+                colors: [Color.accentColor.opacity(0.3), .clear],
+                center: .topTrailing,
+                startRadius: 12,
+                endRadius: 360
+            )
+            .blendMode(.plusLighter)
+        }
+        .ignoresSafeArea()
+    }
+
     @ViewBuilder
     private func wordDisplayArea(geometry: GeometryProxy) -> some View {
-        VStack(spacing: 12) {
-            // Sentence context - dynamic height, clipped to bounds
+        VStack(spacing: 16) {
             if engine.showSentenceContext && !engine.currentSentenceWords.isEmpty {
                 SentenceContextView(
                     words: engine.currentSentenceWords,
                     currentWordIndex: engine.currentWordIndexInSentence
                 )
                 .frame(
-                    maxWidth: min(geometry.size.width * 0.95, 640),
-                    minHeight: 120,
-                    maxHeight: 120,
+                    maxWidth: min(geometry.size.width * 0.94, 680),
+                    minHeight: 108,
+                    maxHeight: 108,
                     alignment: .top
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .background {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(.clear)
+                        .glassEffect(
+                            .regular.tint(.white.opacity(0.08)),
+                            in: RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        )
+                }
             }
-            
-            // Main RSVP word - always in the same position
+
             WordDisplay(
                 word: engine.currentWord,
                 usesChunkLayout: wordDisplayMode == .threeWordChunk
             )
-                .frame(maxWidth: min(geometry.size.width * 0.92, 680))
+                .frame(maxWidth: min(geometry.size.width * 0.9, 680))
                 .contentShape(Rectangle())
                 .onTapGesture {
                     engine.toggle()
                 }
-
-            // Status: word count and time remaining
-            HStack(spacing: 8) {
-                if chapterContext.title != "Whole Book" {
-                    statusChip(text: chapterContext.title, systemImage: "book.closed")
-                }
-
-                statusChip(text: statusText, systemImage: "textformat.123")
-
-                if let timeRemaining = timeRemainingText {
-                    statusChip(text: timeRemaining, systemImage: "clock")
-                }
-            }
-            .padding(.top, 6)
+                .shadow(color: .black.opacity(0.24), radius: 26, y: 14)
         }
     }
 
     private var floatingControls: some View {
-        VStack(spacing: 16) {
-            nowPlayingHeader
+        VStack(spacing: 18) {
+            Capsule()
+                .fill(.white.opacity(0.36))
+                .frame(width: 42, height: 5)
+                .padding(.top, 2)
 
-            ReadingModeSelector(currentMode: engine.currentMode) { mode in
-                engine.applyMode(mode)
-            }
+            nowPlayingHeader
 
             ProgressSlider(
                 value: Binding(
@@ -241,109 +249,172 @@ struct RSVPView: View {
                 trailingLabel: chapterRemainingLabel
             )
 
-            HStack(spacing: 20) {
-                HoldableButton(
-                    icon: "backward.fill",
-                    onTap: { engine.previousSentence() },
-                    onHoldTick: { engine.previousSentence() },
-                    disabled: !engine.hasContent || engine.isAtStart,
-                    size: controlButtonSize
-                )
+            transportControls
 
-                    // Play/Pause - larger, prominent
-                HoldableButton(
-                    icon: engine.isPlaying ? "pause.fill" : "play.fill",
-                    onTap: { engine.toggle() },
-                    onHoldTick: { }, // No hold action for play/pause
-                    disabled: !engine.hasContent,
-                    size: playButtonSize,
-                    iconFont: .title,
-                    accentedBackground: true
-                )
-                
-                // Forward: tap = next sentence, hold = continuous forward
-                HoldableButton(
-                    icon: "forward.fill",
-                    onTap: { engine.nextSentence() },
-                    onHoldTick: { engine.nextSentence() },
-                    disabled: engine.isAtEnd,
-                    size: controlButtonSize
-                )
+            tempoStrip
+
+            secondaryControlRow
+
+            ReadingModeSelector(currentMode: engine.currentMode) { mode in
+                engine.applyMode(mode)
             }
-
-            WPMControl(wpm: $engine.wordsPerMinute)
         }
-        .padding(.horizontal, 18)
+        .padding(.horizontal, 20)
         .padding(.top, 14)
-        .padding(.bottom, 16)
+        .padding(.bottom, 18)
         .background {
-            RoundedRectangle(cornerRadius: 30, style: .continuous)
+            RoundedRectangle(cornerRadius: 34, style: .continuous)
                 .fill(.clear)
                 .glassEffect(
-                    .regular.tint(Color.white.opacity(0.08)),
-                    in: RoundedRectangle(cornerRadius: 30, style: .continuous)
+                    .regular.tint(Color.white.opacity(0.1)),
+                    in: RoundedRectangle(cornerRadius: 34, style: .continuous)
                 )
         }
         .overlay {
-            RoundedRectangle(cornerRadius: 30, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.16), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 34, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.22), lineWidth: 1)
         }
-        .shadow(color: .black.opacity(0.14), radius: 22, y: 10)
+        .shadow(color: .black.opacity(0.24), radius: 28, y: 14)
+    }
+
+    private var transportControls: some View {
+        HStack(spacing: 34) {
+            Button {
+                engine.previousSentence()
+            } label: {
+                Image(systemName: "backward.fill")
+                    .font(.system(size: 31, weight: .semibold))
+                    .frame(width: 50, height: 50)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(!engine.hasContent || engine.isAtStart ? .tertiary : .primary)
+            .disabled(!engine.hasContent || engine.isAtStart)
+
+            Button {
+                engine.toggle()
+            } label: {
+                ZStack {
+                    Circle()
+                        .fill(.white.opacity(0.95))
+                        .frame(width: 78, height: 78)
+                    Image(systemName: engine.isPlaying ? "pause.fill" : "play.fill")
+                        .font(.system(size: 30, weight: .bold))
+                        .foregroundStyle(.black.opacity(0.86))
+                }
+            }
+            .buttonStyle(.plain)
+            .disabled(!engine.hasContent)
+
+            Button {
+                engine.nextSentence()
+            } label: {
+                Image(systemName: "forward.fill")
+                    .font(.system(size: 31, weight: .semibold))
+                    .frame(width: 50, height: 50)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(engine.isAtEnd ? .tertiary : .primary)
+            .disabled(engine.isAtEnd)
+        }
+    }
+
+    private var tempoStrip: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "tortoise.fill")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.secondary)
+                .frame(width: 20)
+
+            Slider(
+                value: Binding(
+                    get: { Double(engine.wordsPerMinute) },
+                    set: { engine.wordsPerMinute = Int($0.rounded()) }
+                ),
+                in: Double(RSVPEngine.minWPM)...Double(RSVPEngine.maxWPM),
+                step: 25
+            )
+            .tint(.white)
+
+            Image(systemName: "hare.fill")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.secondary)
+                .frame(width: 20)
+
+            Text("\(engine.wordsPerMinute)")
+                .font(AppFont.semibold(size: 13))
+                .monospacedDigit()
+                .frame(minWidth: 44, alignment: .trailing)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var secondaryControlRow: some View {
+        HStack(spacing: 16) {
+            Button {
+                showingBookmarks = true
+            } label: {
+                Label("Bookmarks", systemImage: book.bookmarks.isEmpty ? "bookmark" : "bookmark.fill")
+            }
+
+            if book.hasChapters {
+                Button {
+                    showingChapters = true
+                } label: {
+                    Label("Chapters", systemImage: "list.bullet.indent")
+                }
+            }
+
+            Button {
+                showingSettings = true
+            } label: {
+                Label("Settings", systemImage: "gear")
+            }
+        }
+        .font(AppFont.caption)
+        .foregroundStyle(.secondary)
+        .labelStyle(.iconOnly)
+        .frame(maxWidth: .infinity)
+        .overlay(alignment: .leading) {
+            Text(chapterWordPositionText)
+                .font(AppFont.caption2)
+                .foregroundStyle(.tertiary)
+                .monospacedDigit()
+        }
+        .overlay(alignment: .trailing) {
+            Text(statusText)
+                .font(AppFont.caption2)
+                .foregroundStyle(.tertiary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
     }
 
     private var nowPlayingHeader: some View {
-        HStack(spacing: 12) {
-            nowPlayingArtwork
-
-            VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(alignment: .top, spacing: 10) {
                 Text(chapterContext.title)
-                    .font(AppFont.semibold(size: 17))
+                    .font(AppFont.semibold(size: 24))
                     .lineLimit(1)
+                    .minimumScaleFactor(0.8)
 
-                Text(nowPlayingSubtitle)
-                    .font(AppFont.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                Spacer(minLength: 0)
+                
+                Text(chapterProgressPercentText)
+                    .font(AppFont.semibold(size: 15))
+                    .foregroundStyle(.secondary.opacity(0.9))
             }
 
-            Spacer(minLength: 8)
+            Text(nowPlayingSubtitle)
+                .font(AppFont.subheadline)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
 
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(chapterProgressPercentText)
-                    .font(AppFont.semibold(size: 13))
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
-
-                Text(chapterWordPositionText)
-                    .font(AppFont.caption2)
+            if let timeRemaining = timeRemainingText {
+                Text(timeRemaining)
+                    .font(AppFont.caption)
                     .foregroundStyle(.tertiary)
-                    .monospacedDigit()
             }
         }
-    }
-
-    private var nowPlayingArtwork: some View {
-        RoundedRectangle(cornerRadius: 12, style: .continuous)
-            .fill(
-                LinearGradient(
-                    colors: [
-                        Color.accentColor.opacity(0.78),
-                        Color.accentColor.opacity(0.52)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-            .overlay {
-                Image(systemName: "text.book.closed.fill")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.92))
-            }
-            .overlay {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .strokeBorder(.white.opacity(0.28), lineWidth: 1)
-            }
-            .frame(width: 50, height: 50)
     }
 
     private var nowPlayingSubtitle: String {
