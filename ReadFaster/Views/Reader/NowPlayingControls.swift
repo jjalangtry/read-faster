@@ -5,28 +5,19 @@ import SwiftUI
 struct PlayPauseButton: View {
     let isPlaying: Bool
     var disabled: Bool = false
-    var size: CGFloat = 70
+    var size: CGFloat = 56
     let action: () -> Void
-
-    @State private var pressed = false
 
     var body: some View {
         Button(action: action) {
             Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                .font(.system(size: size * 0.42, weight: .bold))
+                .font(.system(size: size * 0.52, weight: .regular))
                 .foregroundStyle(disabled ? .tertiary : .primary)
                 .frame(width: size, height: size)
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .background {
-            Circle()
-                .fill(.clear)
-                .glassEffect(.regular.tint(.accentColor).interactive(), in: Circle())
-        }
-        .scaleEffect(pressed ? 0.92 : 1.0)
-        .animation(.spring(response: 0.25, dampingFraction: 0.6), value: pressed)
-        .opacity(disabled ? 0.5 : 1.0)
+        .opacity(disabled ? 0.4 : 1.0)
         .allowsHitTesting(!disabled)
         #if os(iOS)
         .sensoryFeedback(.impact(flexibility: .soft), trigger: isPlaying)
@@ -34,63 +25,25 @@ struct PlayPauseButton: View {
     }
 }
 
-// MARK: - Now Playing Progress Bar
+// MARK: - Transport Button (skip backward / forward)
 
-struct NowPlayingProgressBar: View {
-    @Binding var value: Double
-    let isPlaying: Bool
-    @State private var isDragging = false
+struct TransportButton: View {
+    let icon: String
+    var disabled: Bool = false
+    var size: CGFloat = 36
+    let action: () -> Void
 
     var body: some View {
-        GeometryReader { geo in
-            let trackHeight: CGFloat = isDragging ? 8 : 5
-            let thumbSize: CGFloat = 16
-
-            ZStack(alignment: .leading) {
-                Capsule()
-                    .fill(Color.primary.opacity(0.1))
-                    .frame(height: trackHeight)
-
-                Capsule()
-                    .fill(Color.accentColor)
-                    .frame(
-                        width: max(trackHeight, geo.size.width * value),
-                        height: trackHeight
-                    )
-
-                if isDragging || !isPlaying {
-                    Circle()
-                        .fill(Color.accentColor)
-                        .frame(width: thumbSize, height: thumbSize)
-                        .shadow(color: .accentColor.opacity(0.4), radius: 4, y: 2)
-                        .offset(x: thumbOffset(
-                            width: geo.size.width,
-                            thumbSize: thumbSize
-                        ))
-                        .transition(.scale.combined(with: .opacity))
-                }
-            }
-            .frame(height: max(trackHeight, thumbSize))
-            .frame(maxHeight: .infinity, alignment: .center)
-            .contentShape(Rectangle())
-            .gesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { gesture in
-                        withAnimation(.easeOut(duration: 0.1)) { isDragging = true }
-                        let ratio = gesture.location.x / geo.size.width
-                        value = min(max(ratio, 0), 1)
-                    }
-                    .onEnded { _ in
-                        withAnimation(.easeOut(duration: 0.2)) { isDragging = false }
-                    }
-            )
-            .animation(.easeOut(duration: 0.15), value: trackHeight)
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: size * 0.62, weight: .regular))
+                .foregroundStyle(disabled ? .tertiary : .primary)
+                .frame(width: size, height: size)
+                .contentShape(Circle())
         }
-        .frame(height: 24)
-    }
-
-    private func thumbOffset(width: CGFloat, thumbSize: CGFloat) -> CGFloat {
-        max(0, min(width - thumbSize, (width - thumbSize) * value))
+        .buttonStyle(.plain)
+        .opacity(disabled ? 0.4 : 1.0)
+        .allowsHitTesting(!disabled)
     }
 }
 
@@ -258,7 +211,11 @@ struct WPMControl: View {
 
     private func continueTimer(isDecrease: Bool) {
         let interval = currentTickInterval
-        if isDecrease { decreaseTimer?.invalidate() } else { increaseTimer?.invalidate() }
+        if isDecrease {
+            decreaseTimer?.invalidate()
+        } else {
+            increaseTimer?.invalidate()
+        }
         let newTimer = Timer.scheduledTimer(
             withTimeInterval: interval,
             repeats: false
