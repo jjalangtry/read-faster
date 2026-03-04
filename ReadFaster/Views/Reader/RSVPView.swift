@@ -1,6 +1,15 @@
 import SwiftUI
 import SwiftData
 
+// Apple Music "Now Playing" layout:
+//   [artwork]  →  RSVP word display
+//   title / artist
+//   scrub bar  (standard Slider)
+//   elapsed … remaining
+//   ◁   ▶︎   ▷   (transport)
+//   speed control
+//   reading mode
+
 struct RSVPView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -13,19 +22,13 @@ struct RSVPView: View {
     @State private var showingSettings = false
     @State private var controlsVisible = true
     @State private var hideControlsTask: Task<Void, Never>?
+    @State private var scrubbing = false
+    @State private var scrubValue: Double = 0
 
     @AppStorage("defaultWPM") private var defaultWPM: Int = 300
     @AppStorage("pauseOnPunctuation") private var pauseOnPunctuation: Bool = true
     @AppStorage("readerWordDisplayMode")
     private var wordDisplayModeRaw = WordDisplayMode.singleWord.rawValue
-
-    #if os(macOS)
-    private let playButtonSize: CGFloat = 72
-    private let controlButtonSize: CGFloat = 52
-    #else
-    private let playButtonSize: CGFloat = 70
-    private let controlButtonSize: CGFloat = 48
-    #endif
 
     var body: some View {
         GeometryReader { geo in
@@ -33,21 +36,18 @@ struct RSVPView: View {
                 backgroundGradient.ignoresSafeArea()
 
                 VStack(spacing: 0) {
-                    bookHeader
-                        .padding(.top, 8)
-                        .opacity(controlsOpacity)
+                    Spacer(minLength: 4)
 
-                    Spacer(minLength: 16)
+                    // "Artwork" — RSVP word display
+                    rsvpHero(geometry: geo)
 
-                    rsvpFocalArea(geometry: geo)
+                    Spacer(minLength: 20)
 
-                    Spacer(minLength: 16)
-
-                    nowPlayingControls(geometry: geo)
-                        .opacity(controlsOpacity)
-                        .padding(.bottom, 8)
+                    // Everything below the hero
+                    controlStack(geometry: geo)
+                        .padding(.bottom, 12)
                 }
-                .padding(.horizontal, 20)
+                .padding(.horizontal, 24)
             }
             .contentShape(Rectangle())
             #if os(iOS)
@@ -166,8 +166,8 @@ struct RSVPView: View {
 
             LinearGradient(
                 colors: [
-                    Color.accentColor.opacity(0.08),
-                    Color.accentColor.opacity(0.03),
+                    Color.accentColor.opacity(0.06),
+                    Color.accentColor.opacity(0.02),
                     .clear
                 ],
                 startPoint: .top,
@@ -176,30 +176,11 @@ struct RSVPView: View {
         }
     }
 
-    // MARK: - Book Header
-
-    private var bookHeader: some View {
-        VStack(spacing: 4) {
-            Text(book.title)
-                .font(AppFont.headline)
-                .lineLimit(1)
-                .foregroundStyle(.primary)
-
-            if let author = book.author, !author.isEmpty {
-                Text(author)
-                    .font(AppFont.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    // MARK: - RSVP Focal Area
+    // MARK: - RSVP Hero (= Album Artwork)
 
     @ViewBuilder
-    private func rsvpFocalArea(geometry: GeometryProxy) -> some View {
-        VStack(spacing: 20) {
+    private func rsvpHero(geometry: GeometryProxy) -> some View {
+        VStack(spacing: 16) {
             if engine.showSentenceContext
                 && !engine.currentSentenceWords.isEmpty {
                 SentenceContextView(
@@ -208,10 +189,10 @@ struct RSVPView: View {
                 )
                 .frame(
                     maxWidth: min(geometry.size.width * 0.92, 600),
-                    maxHeight: 80,
+                    maxHeight: 72,
                     alignment: .top
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .clipShape(RoundedRectangle(cornerRadius: 14))
                 .opacity(controlsOpacity)
             }
 
@@ -219,79 +200,145 @@ struct RSVPView: View {
                 word: engine.currentWord,
                 usesChunkLayout: wordDisplayMode == .threeWordChunk
             )
-            .frame(maxWidth: min(geometry.size.width * 0.92, 640))
+            .frame(maxWidth: min(geometry.size.width - 48, 640))
             .contentShape(Rectangle())
             .onTapGesture { tapToggle() }
         }
     }
 
-    // MARK: - Now Playing Controls
+    // MARK: - Control Stack (title → scrubber → transport → speed → mode)
 
     @ViewBuilder
-    private func nowPlayingControls(geometry: GeometryProxy) -> some View {
-        let maxW = min(geometry.size.width - 40, 500.0)
+    private func controlStack(geometry: GeometryProxy) -> some View {
+        let maxW = min(geometry.size.width - 48, 500.0)
 
-        VStack(spacing: 20) {
-            progressSection.frame(maxWidth: maxW)
-            playbackButtons.frame(maxWidth: maxW)
-            WPMControl(wpm: $engine.wordsPerMinute).frame(maxWidth: maxW)
+        VStack(spacing: 0) {
+            // Title + Author (like song title / artist in Apple Music)
+            titleBlock
+                .frame(maxWidth: maxW, alignment: .leading)
+                .opacity(controlsOpacity)
+                .padding(.bottom, 16)
 
+            // Scrub bar — standard system Slider
+            scrubBar
+                .frame(maxWidth: maxW)
+                .opacity(controlsOpacity)
+
+            // Elapsed / remaining time
+            timeRow
+                .frame(maxWidth: maxW)
+                .opacity(controlsOpacity)
+                .padding(.bottom, 20)
+
+            // Transport: ◁  ▶︎  ▷
+            transportControls
+                .frame(maxWidth: maxW)
+                .padding(.bottom, 24)
+
+            // Speed control
+            WPMControl(wpm: $engine.wordsPerMinute)
+                .frame(maxWidth: maxW)
+                .opacity(controlsOpacity)
+                .padding(.bottom, 16)
+
+            // Reading mode
             ReadingModeSelector(currentMode: engine.currentMode) { mode in
                 engine.applyMode(mode)
             }
+            .opacity(controlsOpacity)
         }
     }
 
-    // MARK: - Progress Section
+    // MARK: - Title Block
 
-    private var progressSection: some View {
-        VStack(spacing: 6) {
-            NowPlayingProgressBar(
-                value: Binding(
-                    get: { engine.displayedProgress },
-                    set: { engine.seekToProgress($0) }
-                ),
-                isPlaying: engine.isPlaying
-            )
+    private var titleBlock: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(book.title)
+                .font(.system(size: 21, weight: .bold))
+                .lineLimit(1)
+                .foregroundStyle(.primary)
 
-            HStack {
-                Text(elapsedPositionText)
-                    .font(AppFont.caption).monospacedDigit()
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Text(timeRemainingText ?? "")
-                    .font(AppFont.caption).monospacedDigit()
-                    .foregroundStyle(.secondary)
+            if let author = book.author, !author.isEmpty {
+                Text(author)
+                    .font(.system(size: 21, weight: .regular))
+                    .lineLimit(1)
+                    .foregroundStyle(.accentColor)
             }
         }
     }
 
-    // MARK: - Playback Buttons
+    // MARK: - Scrub Bar (standard system Slider)
 
-    private var playbackButtons: some View {
-        HStack(spacing: 0) {
+    private var scrubBar: some View {
+        Slider(
+            value: Binding(
+                get: { scrubbing ? scrubValue : engine.displayedProgress },
+                set: { newValue in
+                    scrubValue = newValue
+                    if !scrubbing { scrubbing = true }
+                }
+            ),
+            in: 0...1
+        ) { editing in
+            if !editing {
+                engine.seekToProgress(scrubValue)
+                scrubbing = false
+            }
+        }
+        .tint(.primary)
+    }
+
+    // MARK: - Time Row
+
+    private var timeRow: some View {
+        HStack {
+            Text(elapsedPositionText)
+                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .foregroundStyle(.secondary)
+
             Spacer()
-            HoldableButton(
+
+            Text(timeRemainingText ?? "")
+                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .foregroundStyle(.secondary)
+        }
+        .padding(.top, 2)
+    }
+
+    // MARK: - Transport Controls
+
+    private var transportControls: some View {
+        HStack {
+            Spacer()
+
+            TransportButton(
                 icon: "backward.fill",
-                onTap: { engine.previousSentence() },
-                onHoldTick: { engine.previousSentence() },
                 disabled: !engine.hasContent || engine.isAtStart,
-                size: controlButtonSize, iconFont: .title3
-            )
+                size: 40
+            ) {
+                engine.previousSentence()
+            }
+
             Spacer()
+
             PlayPauseButton(
                 isPlaying: engine.isPlaying,
                 disabled: !engine.hasContent,
-                size: playButtonSize
-            ) { engine.toggle() }
+                size: 56
+            ) {
+                engine.toggle()
+            }
+
             Spacer()
-            HoldableButton(
+
+            TransportButton(
                 icon: "forward.fill",
-                onTap: { engine.nextSentence() },
-                onHoldTick: { engine.nextSentence() },
                 disabled: engine.isAtEnd,
-                size: controlButtonSize, iconFont: .title3
-            )
+                size: 40
+            ) {
+                engine.nextSentence()
+            }
+
             Spacer()
         }
     }
@@ -358,12 +405,13 @@ extension RSVPView {
         guard total > 0 else { return "0 / 0" }
         let cur = min(max(engine.currentIndex + 1, 1), total)
         let pct = min(100, max(0, Int(engine.displayedProgress * 100)))
-        return "\(cur) / \(total)  ·  \(pct)%"
+        return "\(cur) / \(total) · \(pct)%"
     }
 
     var timeRemainingText: String? {
         let left = max(
-            0, engine.totalWords - (engine.currentIndex + engine.currentDisplayWordCount)
+            0,
+            engine.totalWords - (engine.currentIndex + engine.currentDisplayWordCount)
         )
         guard left > 0, engine.wordsPerMinute > 0 else { return nil }
         let secs = Int(Double(left) / Double(engine.wordsPerMinute) * 60)
@@ -416,7 +464,9 @@ extension RSVPView {
         let start = max(0, engine.currentIndex - 5)
         let end = min(allWords.count, engine.currentIndex + 5)
         let ctx = allWords[start..<end].joined(separator: " ")
-        try? svc.addBookmark(to: book, at: engine.currentIndex, highlightedText: ctx)
+        try? svc.addBookmark(
+            to: book, at: engine.currentIndex, highlightedText: ctx
+        )
     }
 
     var wordDisplayMode: WordDisplayMode {
