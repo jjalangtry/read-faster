@@ -11,88 +11,58 @@ struct RSVPView: View {
     @State private var showingBookmarks = false
     @State private var showingChapters = false
     @State private var showingSettings = false
-    @Namespace private var controlsNamespace
+    @State private var controlsVisible = true
+    @State private var hideControlsTask: Task<Void, Never>?
 
     @AppStorage("defaultWPM") private var defaultWPM: Int = 300
     @AppStorage("pauseOnPunctuation") private var pauseOnPunctuation: Bool = true
-    @AppStorage("readerWordDisplayMode") private var wordDisplayModeRaw = WordDisplayMode.singleWord.rawValue
-    
-    // Platform-adaptive button sizes (larger on macOS for better click targets)
+    @AppStorage("readerWordDisplayMode")
+    private var wordDisplayModeRaw = WordDisplayMode.singleWord.rawValue
+
     #if os(macOS)
-    private let controlButtonSize: CGFloat = 56
     private let playButtonSize: CGFloat = 72
-    #else
     private let controlButtonSize: CGFloat = 52
-    private let playButtonSize: CGFloat = 68
+    #else
+    private let playButtonSize: CGFloat = 70
+    private let controlButtonSize: CGFloat = 48
     #endif
 
     var body: some View {
-        GeometryReader { geometry in
+        GeometryReader { geo in
             ZStack {
-                // Background - allows glass to sample content
-                #if os(macOS)
-                Color(NSColor.windowBackgroundColor)
-                    .ignoresSafeArea()
-                #else
-                Color(UIColor.systemBackground)
-                    .ignoresSafeArea()
-                #endif
+                backgroundGradient.ignoresSafeArea()
 
                 VStack(spacing: 0) {
-                    Spacer()
+                    bookHeader
+                        .padding(.top, 8)
+                        .opacity(controlsOpacity)
 
-                    wordDisplayArea(geometry: geometry)
+                    Spacer(minLength: 16)
 
-                    Spacer()
+                    rsvpFocalArea(geometry: geo)
 
-                    // Floating glass controls at bottom
-                    floatingControls
-                        .padding(.horizontal)
+                    Spacer(minLength: 16)
+
+                    nowPlayingControls(geometry: geo)
+                        .opacity(controlsOpacity)
                         .padding(.bottom, 8)
                 }
+                .padding(.horizontal, 20)
             }
+            .contentShape(Rectangle())
+            #if os(iOS)
+            .gesture(swipeGestures)
+            #endif
         }
-        .navigationTitle(book.title)
+        .navigationTitle("")
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         #endif
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                HStack(spacing: 8) {
-                    Button {
-                        toggleChunkMode()
-                    } label: {
-                        Image(systemName: wordDisplayMode == .threeWordChunk ? "text.justify" : "text.justify.left")
-                    }
-                    .help(wordDisplayMode == .threeWordChunk ? "Switch to one-word mode" : "Switch to three-word mode")
-
-                    Button {
-                        showingBookmarks = true
-                    } label: {
-                        Image(systemName: book.bookmarks.isEmpty ? "bookmark" : "bookmark.fill")
-                    }
-
-                    if book.hasChapters {
-                    Button {
-                            showingChapters = true
-                    } label: {
-                            Image(systemName: "list.bullet.indent")
-                        }
-                    }
-
-                    Button {
-                        showingSettings = true
-                    } label: {
-                        Image(systemName: "gear")
-                    }
-                }
-            }
-        }
+        .toolbar { toolbarContent }
         .sheet(isPresented: $showingBookmarks) {
-            BookmarksSheet(book: book, engine: engine) {
-                addBookmark()
-            }
-            .presentationDetents([.medium, .large])
+            BookmarksSheet(book: book, engine: engine) { addBookmark() }
+                .presentationDetents([.medium, .large])
         }
         .sheet(isPresented: $showingChapters) {
             ChaptersSheet(book: book, engine: engine)
@@ -107,12 +77,11 @@ struct RSVPView: View {
             setupEngine()
         }
         .onChange(of: wordDisplayModeRaw) { _, rawValue in
-            let mode = WordDisplayMode(rawValue: rawValue) ?? WordDisplayMode.singleWord
+            let mode = WordDisplayMode(rawValue: rawValue) ?? .singleWord
             guard mode.rawValue == rawValue else {
                 wordDisplayModeRaw = mode.rawValue
                 return
             }
-            // Defer engine mutation to avoid publishing during view updates.
             Task { @MainActor in
                 engine.setWordsPerChunk(mode.wordsPerChunk)
             }
@@ -120,38 +89,22 @@ struct RSVPView: View {
         .onChange(of: pauseOnPunctuation) { _, newValue in
             engine.pauseOnPunctuation = newValue
         }
-        .onDisappear {
-            engine.pause()
+        .onChange(of: engine.isPlaying) { _, playing in
+            scheduleAutoHide(playing: playing)
         }
+        .onDisappear { engine.pause() }
         #if os(macOS)
-        .onReceive(NotificationCenter.default.publisher(for: NSApplication.willResignActiveNotification)) { _ in
-            engine.pause()
-        }
-        // Keyboard shortcuts for macOS
-        .onKeyPress(.space) {
-            engine.toggle()
-            return .handled
-        }
-        .onKeyPress("k") {
-            engine.toggle()
-            return .handled
-        }
-        .onKeyPress(.leftArrow) {
-            engine.previousSentence()
-            return .handled
-        }
-        .onKeyPress(.rightArrow) {
-            engine.nextSentence()
-            return .handled
-        }
-        .onKeyPress("j") {
-            engine.previousSentence()
-            return .handled
-        }
-        .onKeyPress("l") {
-            engine.nextSentence()
-            return .handled
-        }
+        .onReceive(
+            NotificationCenter.default.publisher(
+                for: NSApplication.willResignActiveNotification
+            )
+        ) { _ in engine.pause() }
+        .onKeyPress(.space) { engine.toggle(); return .handled }
+        .onKeyPress("k") { engine.toggle(); return .handled }
+        .onKeyPress(.leftArrow) { engine.previousSentence(); return .handled }
+        .onKeyPress(.rightArrow) { engine.nextSentence(); return .handled }
+        .onKeyPress("j") { engine.previousSentence(); return .handled }
+        .onKeyPress("l") { engine.nextSentence(); return .handled }
         .onKeyPress(.upArrow) {
             engine.wordsPerMinute = min(RSVPEngine.maxWPM, engine.wordsPerMinute + 25)
             return .handled
@@ -160,73 +113,140 @@ struct RSVPView: View {
             engine.wordsPerMinute = max(RSVPEngine.minWPM, engine.wordsPerMinute - 25)
             return .handled
         }
-        .onKeyPress("r") {
-            engine.replayCurrentSentence()
-            return .handled
-        }
-        .onKeyPress("3") {
-            toggleChunkMode()
-            return .handled
-        }
+        .onKeyPress("r") { engine.replayCurrentSentence(); return .handled }
+        .onKeyPress("3") { toggleChunkMode(); return .handled }
         .focusable()
         #else
-        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in
-            engine.pause()
-        }
+        .onReceive(
+            NotificationCenter.default.publisher(
+                for: UIApplication.willResignActiveNotification
+            )
+        ) { _ in engine.pause() }
         #endif
     }
 
+    // MARK: - Toolbar
+
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .primaryAction) {
+            HStack(spacing: 8) {
+                Button { toggleChunkMode() } label: {
+                    Image(systemName: wordDisplayMode == .threeWordChunk
+                          ? "text.justify" : "text.justify.left")
+                }
+
+                Button { showingBookmarks = true } label: {
+                    Image(systemName: book.bookmarks.isEmpty
+                          ? "bookmark" : "bookmark.fill")
+                }
+
+                if book.hasChapters {
+                    Button { showingChapters = true } label: {
+                        Image(systemName: "list.bullet.indent")
+                    }
+                }
+
+                Button { showingSettings = true } label: {
+                    Image(systemName: "gear")
+                }
+            }
+        }
+    }
+
+    // MARK: - Background
+
+    private var backgroundGradient: some View {
+        ZStack {
+            #if os(macOS)
+            Color(NSColor.windowBackgroundColor)
+            #else
+            Color(UIColor.systemBackground)
+            #endif
+
+            LinearGradient(
+                colors: [
+                    Color.accentColor.opacity(0.08),
+                    Color.accentColor.opacity(0.03),
+                    .clear
+                ],
+                startPoint: .top,
+                endPoint: .center
+            )
+        }
+    }
+
+    // MARK: - Book Header
+
+    private var bookHeader: some View {
+        VStack(spacing: 4) {
+            Text(book.title)
+                .font(AppFont.headline)
+                .lineLimit(1)
+                .foregroundStyle(.primary)
+
+            if let author = book.author, !author.isEmpty {
+                Text(author)
+                    .font(AppFont.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - RSVP Focal Area
+
     @ViewBuilder
-    private func wordDisplayArea(geometry: GeometryProxy) -> some View {
-        VStack(spacing: 12) {
-            // Sentence context - dynamic height, clipped to bounds
-            if engine.showSentenceContext && !engine.currentSentenceWords.isEmpty {
+    private func rsvpFocalArea(geometry: GeometryProxy) -> some View {
+        VStack(spacing: 20) {
+            if engine.showSentenceContext
+                && !engine.currentSentenceWords.isEmpty {
                 SentenceContextView(
                     words: engine.currentSentenceWords,
                     currentWordIndex: engine.currentWordIndexInSentence
                 )
                 .frame(
-                    maxWidth: min(geometry.size.width * 0.95, 640),
-                    minHeight: 120,
-                    maxHeight: 120,
+                    maxWidth: min(geometry.size.width * 0.92, 600),
+                    maxHeight: 80,
                     alignment: .top
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .opacity(controlsOpacity)
             }
-            
-            // Main RSVP word - always in the same position
+
             WordDisplay(
                 word: engine.currentWord,
                 usesChunkLayout: wordDisplayMode == .threeWordChunk
             )
-                .frame(maxWidth: min(geometry.size.width * 0.92, 680))
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    engine.toggle()
-                }
-
-            // Status: word count and time remaining
-            HStack(spacing: 8) {
-                statusChip(text: statusText, systemImage: "textformat.123")
-
-                if let timeRemaining = timeRemainingText {
-                    statusChip(text: timeRemaining, systemImage: "clock")
-                }
-            }
-            .padding(.top, 6)
+            .frame(maxWidth: min(geometry.size.width * 0.92, 640))
+            .contentShape(Rectangle())
+            .onTapGesture { tapToggle() }
         }
     }
 
-    private var floatingControls: some View {
-        VStack(spacing: 16) {
-            // Reading mode selector
+    // MARK: - Now Playing Controls
+
+    @ViewBuilder
+    private func nowPlayingControls(geometry: GeometryProxy) -> some View {
+        let maxW = min(geometry.size.width - 40, 500.0)
+
+        VStack(spacing: 20) {
+            progressSection.frame(maxWidth: maxW)
+            playbackButtons.frame(maxWidth: maxW)
+            WPMControl(wpm: $engine.wordsPerMinute).frame(maxWidth: maxW)
+
             ReadingModeSelector(currentMode: engine.currentMode) { mode in
                 engine.applyMode(mode)
             }
+        }
+    }
 
-            // Progress bar
-            ProgressSlider(
+    // MARK: - Progress Section
+
+    private var progressSection: some View {
+        VStack(spacing: 6) {
+            NowPlayingProgressBar(
                 value: Binding(
                     get: { engine.displayedProgress },
                     set: { engine.seekToProgress($0) }
@@ -234,434 +254,182 @@ struct RSVPView: View {
                 isPlaying: engine.isPlaying
             )
 
-            // Playback controls - streamlined 3-button layout
-            HStack(spacing: 20) {
-                // Back: tap = previous sentence, hold = continuous rewind
-                HoldableButton(
-                    icon: "backward.fill",
-                    onTap: { engine.previousSentence() },
-                    onHoldTick: { engine.previousSentence() },
-                    disabled: !engine.hasContent || engine.isAtStart,
-                    size: controlButtonSize
-                )
-
-                    // Play/Pause - larger, prominent
-                HoldableButton(
-                    icon: engine.isPlaying ? "pause.fill" : "play.fill",
-                    onTap: { engine.toggle() },
-                    onHoldTick: { }, // No hold action for play/pause
-                    disabled: !engine.hasContent,
-                    size: playButtonSize,
-                    iconFont: .title,
-                    accentedBackground: true
-                )
-                
-                // Forward: tap = next sentence, hold = continuous forward
-                HoldableButton(
-                    icon: "forward.fill",
-                    onTap: { engine.nextSentence() },
-                    onHoldTick: { engine.nextSentence() },
-                    disabled: engine.isAtEnd,
-                    size: controlButtonSize
-                )
+            HStack {
+                Text(elapsedPositionText)
+                    .font(AppFont.caption).monospacedDigit()
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text(timeRemainingText ?? "")
+                    .font(AppFont.caption).monospacedDigit()
+                    .foregroundStyle(.secondary)
             }
-
-            // WPM control with glass
-            WPMControl(wpm: $engine.wordsPerMinute)
         }
     }
 
-    private var statusText: String {
+    // MARK: - Playback Buttons
+
+    private var playbackButtons: some View {
+        HStack(spacing: 0) {
+            Spacer()
+            HoldableButton(
+                icon: "backward.fill",
+                onTap: { engine.previousSentence() },
+                onHoldTick: { engine.previousSentence() },
+                disabled: !engine.hasContent || engine.isAtStart,
+                size: controlButtonSize, iconFont: .title3
+            )
+            Spacer()
+            PlayPauseButton(
+                isPlaying: engine.isPlaying,
+                disabled: !engine.hasContent,
+                size: playButtonSize
+            ) { engine.toggle() }
+            Spacer()
+            HoldableButton(
+                icon: "forward.fill",
+                onTap: { engine.nextSentence() },
+                onHoldTick: { engine.nextSentence() },
+                disabled: engine.isAtEnd,
+                size: controlButtonSize, iconFont: .title3
+            )
+            Spacer()
+        }
+    }
+}
+
+// MARK: - Auto-Hide & Gestures
+
+extension RSVPView {
+    var controlsOpacity: Double {
+        controlsVisible || !engine.isPlaying ? 1 : 0.15
+    }
+
+    func scheduleAutoHide(playing: Bool) {
+        hideControlsTask?.cancel()
+        if playing {
+            hideControlsTask = Task { @MainActor in
+                try? await Task.sleep(for: .seconds(3))
+                guard !Task.isCancelled, engine.isPlaying else { return }
+                withAnimation(.easeOut(duration: 0.5)) {
+                    controlsVisible = false
+                }
+            }
+        } else {
+            withAnimation(.easeOut(duration: 0.3)) {
+                controlsVisible = true
+            }
+        }
+    }
+
+    func tapToggle() {
+        if engine.isPlaying && !controlsVisible {
+            withAnimation(.easeOut(duration: 0.25)) { controlsVisible = true }
+            scheduleAutoHide(playing: true)
+            return
+        }
+        engine.toggle()
+    }
+
+    #if os(iOS)
+    var swipeGestures: some Gesture {
+        DragGesture(minimumDistance: 50, coordinateSpace: .local)
+            .onEnded { value in
+                let hori = value.translation.width
+                let vert = value.translation.height
+                if abs(hori) > abs(vert) {
+                    if hori < -50 {
+                        engine.nextSentence()
+                    } else if hori > 50 {
+                        engine.previousSentence()
+                    }
+                } else if vert > 80 {
+                    dismiss()
+                }
+            }
+    }
+    #endif
+}
+
+// MARK: - Text Helpers & Engine Setup
+
+extension RSVPView {
+    var elapsedPositionText: String {
         let total = engine.totalWords
         guard total > 0 else { return "0 / 0" }
-
-        let start = min(max(engine.currentIndex + 1, 1), total)
-        let end = min(total, start + engine.currentDisplayWordCount - 1)
-        let percent = min(100, max(0, Int(engine.displayedProgress * 100)))
-
-        if end > start {
-            return "\(start)-\(end) / \(total) (\(percent)%)"
-        }
-
-        return "\(start) / \(total) (\(percent)%)"
-    }
-    
-    /// Calculates time remaining based on current WPM and words left
-    private var timeRemainingText: String? {
-        let wordsRemaining = max(0, engine.totalWords - (engine.currentIndex + engine.currentDisplayWordCount))
-        guard wordsRemaining > 0, engine.wordsPerMinute > 0 else { return nil }
-        
-        let minutesRemaining = Double(wordsRemaining) / Double(engine.wordsPerMinute)
-        let totalSeconds = Int(minutesRemaining * 60)
-        
-        let hours = totalSeconds / 3600
-        let minutes = (totalSeconds % 3600) / 60
-        
-        if hours > 0 {
-            return "\(hours)h \(minutes)m left"
-        } else if minutes > 0 {
-            return "\(minutes)m left"
-        } else {
-            return "<1m left"
-        }
+        let cur = min(max(engine.currentIndex + 1, 1), total)
+        let pct = min(100, max(0, Int(engine.displayedProgress * 100)))
+        return "\(cur) / \(total)  ·  \(pct)%"
     }
 
-    private func setupEngine() {
+    var timeRemainingText: String? {
+        let left = max(
+            0, engine.totalWords - (engine.currentIndex + engine.currentDisplayWordCount)
+        )
+        guard left > 0, engine.wordsPerMinute > 0 else { return nil }
+        let secs = Int(Double(left) / Double(engine.wordsPerMinute) * 60)
+        let hours = secs / 3600
+        let mins = (secs % 3600) / 60
+        if hours > 0 { return "-\(hours)h \(mins)m" }
+        if mins > 0 { return "-\(mins)m" }
+        return "-<1m"
+    }
+
+    func setupEngine() {
         engine.load(words: book.words)
         engine.wordsPerMinute = defaultWPM
         engine.pauseOnPunctuation = pauseOnPunctuation
         engine.setWordsPerChunk(wordDisplayMode.wordsPerChunk)
 
-        // Resume from saved position
         if let progress = book.progress {
             engine.seek(to: progress.currentWordIndex)
         }
 
-        // Setup progress callback
-        engine.onProgressUpdate = { [weak engine] wordIndex, sessionTime, wordsRead in
+        engine.onProgressUpdate = { [weak engine] idx, time, count in
             guard engine != nil else { return }
             Task { @MainActor in
-                let storage = StorageService(modelContext: modelContext)
-                try? storage.updateProgress(
-                    for: book,
-                    wordIndex: wordIndex,
-                    sessionTime: sessionTime,
-                    wordsRead: wordsRead
+                let svc = StorageService(modelContext: modelContext)
+                try? svc.updateProgress(
+                    for: book, wordIndex: idx,
+                    sessionTime: time, wordsRead: count
                 )
             }
         }
 
-        // Start session
         Task {
-            let storage = StorageService(modelContext: modelContext)
-            try? storage.startReadingSession(for: book)
+            let svc = StorageService(modelContext: modelContext)
+            try? svc.startReadingSession(for: book)
         }
     }
 
-    private func migrateLegacyWordDisplayModeIfNeeded() {
+    func migrateLegacyWordDisplayModeIfNeeded() {
         let defaults = UserDefaults.standard
         guard defaults.object(forKey: "readerWordDisplayMode") == nil,
               defaults.object(forKey: "wordsPerChunk") != nil else { return }
-
-        let legacyValue = defaults.integer(forKey: "wordsPerChunk")
-        wordDisplayModeRaw = (
-            legacyValue >= 3 ? WordDisplayMode.threeWordChunk : WordDisplayMode.singleWord
-        ).rawValue
+        let legacy = defaults.integer(forKey: "wordsPerChunk")
+        wordDisplayModeRaw = (legacy >= 3
+            ? WordDisplayMode.threeWordChunk : .singleWord).rawValue
     }
 
-    private func addBookmark() {
-        let storage = StorageService(modelContext: modelContext)
-        let words = book.words
-        let startIndex = max(0, engine.currentIndex - 5)
-        let endIndex = min(words.count, engine.currentIndex + 5)
-        let context = words[startIndex..<endIndex].joined(separator: " ")
-
-        try? storage.addBookmark(
-            to: book,
-            at: engine.currentIndex,
-            highlightedText: context
-        )
+    func addBookmark() {
+        let svc = StorageService(modelContext: modelContext)
+        let allWords = book.words
+        let start = max(0, engine.currentIndex - 5)
+        let end = min(allWords.count, engine.currentIndex + 5)
+        let ctx = allWords[start..<end].joined(separator: " ")
+        try? svc.addBookmark(to: book, at: engine.currentIndex, highlightedText: ctx)
     }
 
-    private var wordDisplayMode: WordDisplayMode {
-        WordDisplayMode(rawValue: wordDisplayModeRaw) ?? WordDisplayMode.singleWord
+    var wordDisplayMode: WordDisplayMode {
+        WordDisplayMode(rawValue: wordDisplayModeRaw) ?? .singleWord
     }
 
-    private func toggleChunkMode() {
-        wordDisplayModeRaw = (
-            wordDisplayMode == .threeWordChunk ? WordDisplayMode.singleWord : WordDisplayMode.threeWordChunk
-        ).rawValue
-    }
-
-    @ViewBuilder
-    private func statusChip(text: String, systemImage: String) -> some View {
-        Label(text, systemImage: systemImage)
-            .font(AppFont.caption)
-            .monospacedDigit()
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(.ultraThinMaterial, in: Capsule())
+    func toggleChunkMode() {
+        wordDisplayModeRaw = (wordDisplayMode == .threeWordChunk
+            ? WordDisplayMode.singleWord : .threeWordChunk).rawValue
     }
 }
 
-struct WPMControl: View {
-    @Binding var wpm: Int
-    @State private var isExpanded = false
-    @State private var sliderValue: Double = 300
-    
-    // Hold-to-repeat state
-    @State private var decreaseTimer: Timer?
-    @State private var increaseTimer: Timer?
-    @State private var tickCount = 0
-    @State private var isDecreasePressed = false
-    @State private var isIncreasePressed = false
-
-    private let step = 25 // Smaller step for smoother control
-    private let holdDelay: TimeInterval = 0.25
-    private let initialTickInterval: TimeInterval = 0.12
-    private let minimumTickInterval: TimeInterval = 0.04
-
-    var body: some View {
-        HStack(spacing: 0) {
-        if isExpanded {
-                // Expanded slider view
-            HStack(spacing: 12) {
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            isExpanded = false
-                        }
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                            .frame(width: 32, height: 32)
-                    }
-                    .buttonStyle(.plain)
-
-                Slider(
-                    value: $sliderValue,
-                    in: Double(RSVPEngine.minWPM)...Double(RSVPEngine.maxWPM),
-                        step: Double(step)
-                    )
-                    .frame(minWidth: 120, maxWidth: 200)
-                    .onChange(of: sliderValue) { _, newValue in
-                        wpm = Int(newValue)
-                    }
-
-                Text("\(Int(sliderValue))")
-                        .font(AppFont.semibold(size: 15))
-                    .monospacedDigit()
-                        .frame(width: 44)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-            .background(.regularMaterial, in: Capsule())
-        } else {
-                // Compact stepper view with hold-to-repeat
-                HStack(spacing: 4) {
-                    // Decrease button - holdable
-                    wpmButton(
-                        icon: "minus",
-                        isPressed: $isDecreasePressed,
-                        disabled: wpm <= RSVPEngine.minWPM,
-                        onTap: { decreaseWPM() },
-                        onHoldStart: { startDecreaseTimer() },
-                        onHoldEnd: { stopDecreaseTimer() }
-                    )
-
-                    // WPM display - tap to expand slider
-            Button {
-                sliderValue = Double(wpm)
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    isExpanded = true
-                }
-            } label: {
-                        VStack(spacing: 2) {
-                            Text("\(wpm)")
-                                .font(AppFont.headline)
-                        .monospacedDigit()
-                            Text("WPM")
-                                .font(AppFont.caption2)
-                                .foregroundStyle(.secondary)
-                        }
-                        .frame(width: 56)
-                    }
-                    .buttonStyle(.plain)
-
-                    // Increase button - holdable
-                    wpmButton(
-                        icon: "plus",
-                        isPressed: $isIncreasePressed,
-                        disabled: wpm >= RSVPEngine.maxWPM,
-                        onTap: { increaseWPM() },
-                        onHoldStart: { startIncreaseTimer() },
-                        onHoldEnd: { stopIncreaseTimer() }
-                    )
-                }
-            }
-        }
-        .animation(.easeInOut(duration: 0.2), value: isExpanded)
-    }
-    
-    @ViewBuilder
-    private func wpmButton(
-        icon: String,
-        isPressed: Binding<Bool>,
-        disabled: Bool,
-        onTap: @escaping () -> Void,
-        onHoldStart: @escaping () -> Void,
-        onHoldEnd: @escaping () -> Void
-    ) -> some View {
-        Image(systemName: icon)
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(disabled ? .tertiary : .primary)
-            .frame(width: 44, height: 44)
-            .contentShape(Circle())
-            .scaleEffect(isPressed.wrappedValue ? 0.9 : 1.0)
-            .animation(.easeOut(duration: 0.1), value: isPressed.wrappedValue)
-            .background {
-                Circle()
-                    .fill(.clear)
-                    .glassEffect(.regular.interactive(), in: Circle())
-            }
-            .opacity(disabled ? 0.5 : 1.0)
-            .gesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { _ in
-                        guard !disabled, !isPressed.wrappedValue else { return }
-                        isPressed.wrappedValue = true
-                        onHoldStart()
-                    }
-                    .onEnded { _ in
-                        let wasHolding = tickCount > 0
-                        onHoldEnd()
-                        isPressed.wrappedValue = false
-                        
-                        if !wasHolding && !disabled {
-                            onTap()
-                        }
-                    }
-            )
-            .allowsHitTesting(!disabled)
-    }
-    
-    private func decreaseWPM() {
-        let newValue = max(RSVPEngine.minWPM, wpm - step)
-        wpm = newValue
-        sliderValue = Double(newValue)
-    }
-    
-    private func increaseWPM() {
-        let newValue = min(RSVPEngine.maxWPM, wpm + step)
-        wpm = newValue
-        sliderValue = Double(newValue)
-    }
-    
-    private func startDecreaseTimer() {
-        tickCount = 0
-        decreaseTimer = Timer.scheduledTimer(withTimeInterval: holdDelay, repeats: false) { _ in
-            Task { @MainActor in
-                guard isDecreasePressed else { return }
-                tickCount += 1
-                decreaseWPM()
-                continueDecreaseTimer()
-            }
-        }
-    }
-    
-    private func continueDecreaseTimer() {
-        let interval = currentTickInterval
-        decreaseTimer?.invalidate()
-        decreaseTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { _ in
-            Task { @MainActor in
-                guard isDecreasePressed, wpm > RSVPEngine.minWPM else { return }
-                tickCount += 1
-                decreaseWPM()
-                continueDecreaseTimer()
-            }
-        }
-    }
-    
-    private func stopDecreaseTimer() {
-        decreaseTimer?.invalidate()
-        decreaseTimer = nil
-        tickCount = 0
-    }
-    
-    private func startIncreaseTimer() {
-        tickCount = 0
-        increaseTimer = Timer.scheduledTimer(withTimeInterval: holdDelay, repeats: false) { _ in
-            Task { @MainActor in
-                guard isIncreasePressed else { return }
-                tickCount += 1
-                increaseWPM()
-                continueIncreaseTimer()
-            }
-        }
-    }
-    
-    private func continueIncreaseTimer() {
-        let interval = currentTickInterval
-        increaseTimer?.invalidate()
-        increaseTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { _ in
-            Task { @MainActor in
-                guard isIncreasePressed, wpm < RSVPEngine.maxWPM else { return }
-                tickCount += 1
-                increaseWPM()
-                continueIncreaseTimer()
-            }
-        }
-    }
-    
-    private func stopIncreaseTimer() {
-        increaseTimer?.invalidate()
-        increaseTimer = nil
-        tickCount = 0
-    }
-    
-    private var currentTickInterval: TimeInterval {
-        if tickCount < 5 {
-            return initialTickInterval
-        } else {
-            let acceleration = Double(tickCount - 5) * 0.015
-            return max(minimumTickInterval, initialTickInterval - acceleration)
-        }
-    }
-}
-
-// MARK: - Reading Mode Selector
-
-struct ReadingModeSelector: View {
-    let currentMode: ReadingMode
-    let onModeChange: (ReadingMode) -> Void
-
-    var body: some View {
-        HStack(spacing: 8) {
-            ForEach(ReadingMode.allCases) { mode in
-                ModeButton(
-                    mode: mode,
-                    isSelected: mode == currentMode,
-                    action: { onModeChange(mode) }
-                )
-            }
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
-        .background(.regularMaterial, in: Capsule())
-    }
-}
-
-struct ModeButton: View {
-    let mode: ReadingMode
-    let isSelected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 6) {
-                Image(systemName: mode.icon)
-                    .font(AppFont.subheadline)
-
-                if isSelected {
-                    Text(mode.displayName)
-                        .font(AppFont.medium(size: 15))
-                }
-            }
-            .foregroundStyle(isSelected ? .primary : .secondary)
-            .padding(.horizontal, isSelected ? 12 : 8)
-            .padding(.vertical, 8)
-            .background {
-                if isSelected {
-                    Capsule()
-                        .fill(Color.accentColor.opacity(0.2))
-                }
-            }
-        }
-        .buttonStyle(.plain)
-        .animation(.easeInOut(duration: 0.2), value: isSelected)
-    }
-}
+// MARK: - Preview
 
 #Preview {
     NavigationStack {
@@ -670,9 +438,12 @@ struct ModeButton: View {
             author: "Author",
             fileName: "sample.txt",
             fileType: .txt,
-            content: "This is a sample book with some content to display in the RSVP reader. It contains multiple words that will be shown one at a time.",
-            totalWords: 25
+            content: "This is a sample book with some content for RSVP.",
+            totalWords: 10
         ))
     }
-    .modelContainer(for: [Book.self, ReadingProgress.self, Bookmark.self], inMemory: true)
+    .modelContainer(
+        for: [Book.self, ReadingProgress.self, Bookmark.self],
+        inMemory: true
+    )
 }

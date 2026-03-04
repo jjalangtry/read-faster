@@ -5,76 +5,84 @@ struct WordDisplay: View {
     var usesChunkLayout: Bool = false
 
     @AppStorage("fontSize") private var fontSize: Double = 48
+    @State private var animate = false
 
     private var orpWord: ORPWord {
         ORPWord(word: word)
     }
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 0) {
             if !usesChunkLayout {
-                // Guide line above
-                guideLine
-
-                // Word display with ORP highlight
-                HStack(spacing: 0) {
-                    // Before ORP (right-aligned to the focal point)
-                    Text(orpWord.before)
-                        .foregroundStyle(.primary)
-                        .frame(minWidth: 0, maxWidth: .infinity, alignment: .trailing)
-
-                    // Focal character (red) - visual anchor point
-                    if let focal = orpWord.focal {
-                        Text(String(focal))
-                            .foregroundStyle(.red)
-                    }
-
-                    // After ORP (left-aligned from focal point)
-                    Text(orpWord.after)
-                        .foregroundStyle(.primary)
-                        .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
-                }
-                .font(AppFont.rsvpWord(size: fontSize))
-                .lineLimit(1)
-                .minimumScaleFactor(0.5)
-
-                // Guide line below with focal indicator
-                ZStack {
-                    guideLine
-
-                    // Focal point indicator - red triangle pointing up
-                    Image(systemName: "triangle.fill")
-                        .font(.system(size: 8))
-                        .foregroundStyle(.red)
-                        .rotationEffect(.degrees(180))
-                        .offset(y: -6)
-                }
+                singleWordView
             } else {
-                // 3-word chunk mode still preserves ORP-style focal highlight.
                 chunkHighlightedView
                     .font(AppFont.rsvpPhrase(size: max(30, fontSize * 0.72)))
                     .frame(maxWidth: .infinity, minHeight: 72)
             }
         }
-        .padding(.horizontal, 24)
-        .padding(.vertical, 36)
-        .frame(minHeight: 170)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24))
-        .overlay(
-            RoundedRectangle(cornerRadius: 24)
-                .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(0.08), radius: 14, y: 8)
+        .padding(.horizontal, 28)
+        .padding(.vertical, 44)
+        .frame(minHeight: 180)
+        .background {
+            RoundedRectangle(cornerRadius: 28)
+                .fill(.clear)
+                .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 28))
+        }
         .accessibilityElement()
         .accessibilityLabel(word)
-        .accessibilityHint(usesChunkLayout ? "Current phrase in chunk reading mode" : "Current word in RSVP reader")
+        .accessibilityHint(usesChunkLayout
+                           ? "Current phrase in chunk reading mode"
+                           : "Current word in RSVP reader")
+        .onChange(of: word) { _, _ in
+            animate = false
+            withAnimation(.easeOut(duration: 0.06)) { animate = true }
+        }
     }
 
-    private var guideLine: some View {
+    // MARK: - Single Word
+
+    private var singleWordView: some View {
+        VStack(spacing: 14) {
+            focalLine
+
+            HStack(spacing: 0) {
+                Text(orpWord.before)
+                    .foregroundStyle(.primary)
+                    .frame(minWidth: 0, maxWidth: .infinity, alignment: .trailing)
+
+                if let focal = orpWord.focal {
+                    Text(String(focal))
+                        .foregroundStyle(.red)
+                }
+
+                Text(orpWord.after)
+                    .foregroundStyle(.primary)
+                    .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+            }
+            .font(AppFont.rsvpWord(size: fontSize))
+            .lineLimit(1)
+            .minimumScaleFactor(0.5)
+
+            ZStack {
+                focalLine
+
+                Image(systemName: "triangle.fill")
+                    .font(.system(size: 7))
+                    .foregroundStyle(.red.opacity(0.7))
+                    .rotationEffect(.degrees(180))
+                    .offset(y: -5)
+            }
+        }
+    }
+
+    private var focalLine: some View {
         Rectangle()
-            .fill(Color.secondary.opacity(0.2))
+            .fill(Color.secondary.opacity(0.15))
             .frame(height: 1)
     }
+
+    // MARK: - Chunk Mode
 
     @ViewBuilder
     private var chunkHighlightedView: some View {
@@ -106,12 +114,10 @@ struct WordDisplay: View {
         guard !words.isEmpty else {
             return ChunkDisplayParts(before: "", anchor: ORPWord(word: ""), after: "")
         }
-
         let anchorIndex = words.count >= 2 ? 1 : 0
         let beforeWords = words.prefix(anchorIndex).joined(separator: " ")
         let afterWords = words.dropFirst(anchorIndex + 1).joined(separator: " ")
         let anchorWord = ORPWord(word: words[anchorIndex])
-
         let before = beforeWords.isEmpty ? "" : beforeWords + " "
         let after = afterWords.isEmpty ? "" : " " + afterWords
         return ChunkDisplayParts(before: before, anchor: anchorWord, after: after)
@@ -122,13 +128,8 @@ struct WordDisplay: View {
         let anchor: ORPWord
         let after: String
 
-        var leadingText: String {
-            before + anchor.before
-        }
-
-        var trailingText: String {
-            anchor.after + after
-        }
+        var leadingText: String { before + anchor.before }
+        var trailingText: String { anchor.after + after }
     }
 }
 

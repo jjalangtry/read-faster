@@ -5,15 +5,12 @@ struct ControlsView: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            // Reading mode selector
             ReadingModeSelector(currentMode: engine.currentMode) { mode in
                 engine.applyMode(mode)
             }
 
-            // Playback controls with glass effect
             GlassEffectContainer {
                 HStack(spacing: 24) {
-                    // Replay previous sentence
                     Button {
                         engine.replayPreviousSentence()
                     } label: {
@@ -26,7 +23,6 @@ struct ControlsView: View {
                     .glassEffect(.regular.interactive(), in: Circle())
                     .disabled(!engine.hasContent || engine.isAtStart)
 
-                    // Previous sentence
                     Button {
                         engine.previousSentence()
                     } label: {
@@ -39,7 +35,6 @@ struct ControlsView: View {
                     .glassEffect(.regular.interactive(), in: Circle())
                     .disabled(!engine.hasContent || engine.isAtStart)
 
-                    // Play/Pause
                     Button {
                         engine.toggle()
                     } label: {
@@ -52,7 +47,6 @@ struct ControlsView: View {
                     .glassEffect(.regular.tint(.accentColor).interactive(), in: Circle())
                     .disabled(!engine.hasContent)
 
-                    // Next sentence
                     Button {
                         engine.nextSentence()
                     } label: {
@@ -67,7 +61,6 @@ struct ControlsView: View {
                 }
             }
 
-            // WPM slider
             WPMSlider(wpm: $engine.wordsPerMinute)
         }
     }
@@ -113,17 +106,14 @@ struct ProgressSlider: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack(alignment: .leading) {
-                // Track
                 Capsule()
                     .fill(Color.secondary.opacity(0.2))
                     .frame(height: 6)
 
-                // Fill
                 Capsule()
                     .fill(Color.accentColor)
                     .frame(width: max(6, geometry.size.width * value), height: 6)
 
-                // Thumb (visible when dragging or paused)
                 if isDragging || !isPlaying {
                     Circle()
                         .fill(Color.accentColor)
