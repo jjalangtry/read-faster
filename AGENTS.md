@@ -43,6 +43,22 @@ Test files are in `Tests/ReadFasterCoreTests/`. These cover `ORPCalculator`, `Te
 
 Any file importing SwiftUI, SwiftData, PDFKit, Vision, Combine, AppKit, or UIKit. This includes all Views, the App entry point, SwiftData models (Book, Bookmark, ReadingProgress), StorageService, RSVPEngine, PDFParser, OCRParser, and AppFont.
 
+### Versioning
+
+The app version follows **semver** (`major.minor.patch`). The source of truth is `MARKETING_VERSION` in `project.yml`.
+
+Xcode Cloud auto-bumps the version on every build using `ci_scripts/ci_post_clone.sh`. The bump level is determined by the **commit message** of the push to `main`:
+
+| Tag in commit message | Bump | Example |
+|---|---|---|
+| `[major]` | major | 0.11.3 → 1.0.0 |
+| `[minor]` | minor | 0.11.3 → 0.12.0 |
+| _(anything else)_ | patch | 0.11.3 → 0.11.4 |
+
+**Do not manually edit version numbers** in `project.yml` or `project.pbxproj` — the CI script handles it. The `CURRENT_PROJECT_VERSION` (build number) is set to the Xcode Cloud `CI_BUILD_NUMBER` automatically.
+
+When writing commit messages, include `[minor]` or `[major]` if the change warrants it. Most commits should bump patch (no tag needed).
+
 ### Full build (macOS only)
 
 On macOS with Xcode installed:
