@@ -43,23 +43,24 @@ struct TransportButton: View {
     }
 }
 
-// MARK: - Speed Presets
+// MARK: - WPM Presets
 
-private struct SpeedPreset {
+private struct WPMPreset: Identifiable {
     let wpm: Int
     let icon: String
     let label: String
+    var id: Int { wpm }
 }
 
-private let speedPresets: [SpeedPreset] = [
-    SpeedPreset(wpm: 200, icon: "tortoise.fill", label: "Slow"),
-    SpeedPreset(wpm: 350, icon: "figure.walk", label: "Normal"),
-    SpeedPreset(wpm: 500, icon: "hare.fill", label: "Fast"),
-    SpeedPreset(wpm: 700, icon: "bolt.fill", label: "Rapid"),
-    SpeedPreset(wpm: 1000, icon: "flame.fill", label: "Max")
+private let wpmPresets: [WPMPreset] = [
+    WPMPreset(wpm: 200, icon: "tortoise.fill", label: "Slow"),
+    WPMPreset(wpm: 350, icon: "figure.walk", label: "Normal"),
+    WPMPreset(wpm: 500, icon: "hare.fill", label: "Fast"),
+    WPMPreset(wpm: 700, icon: "bolt.fill", label: "Rapid"),
+    WPMPreset(wpm: 1000, icon: "flame.fill", label: "Max")
 ]
 
-private let snapThreshold = 30
+private let wpmSnapThreshold = 30
 
 // MARK: - WPM Control
 
@@ -179,7 +180,7 @@ struct WPMControl: View {
 
     private var presetTickMarks: some View {
         HStack {
-            ForEach(Array(speedPresets.enumerated()), id: \.offset) { _, preset in
+            ForEach(wpmPresets) { preset in
                 Spacer()
                 presetTick(preset)
                 Spacer()
@@ -187,7 +188,7 @@ struct WPMControl: View {
         }
     }
 
-    private func presetTick(_ preset: SpeedPreset) -> some View {
+    private func presetTick(_ preset: WPMPreset) -> some View {
         Button {
             sliderValue = Double(preset.wpm)
             wpm = preset.wpm
@@ -214,11 +215,11 @@ struct WPMControl: View {
     }
 
     private func isNearPreset(_ presetWPM: Int) -> Bool {
-        abs(wpm - presetWPM) <= snapThreshold
+        abs(wpm - presetWPM) <= wpmSnapThreshold
     }
 
     private func snapToPresetIfClose(_ value: Int) {
-        for preset in speedPresets where abs(value - preset.wpm) <= snapThreshold {
+        for preset in wpmPresets where abs(value - preset.wpm) <= wpmSnapThreshold {
             if lastSnappedPreset != preset.wpm {
                 lastSnappedPreset = preset.wpm
                 sliderValue = Double(preset.wpm)

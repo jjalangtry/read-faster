@@ -129,8 +129,12 @@ struct RSVPView: View {
     @ViewBuilder
     private func landscapeLayout(geometry: GeometryProxy) -> some View {
         HStack(spacing: 20) {
-            rsvpHero(geometry: geometry)
-                .frame(maxWidth: geometry.size.width * 0.5)
+            VStack {
+                Spacer()
+                rsvpHero(geometry: geometry)
+                Spacer()
+            }
+            .frame(maxWidth: geometry.size.width * 0.5)
 
             VStack(spacing: 0) {
                 Spacer(minLength: 4)
