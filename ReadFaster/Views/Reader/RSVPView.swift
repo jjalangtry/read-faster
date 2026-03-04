@@ -194,16 +194,48 @@ struct RSVPView: View {
 
     @ViewBuilder
     private func wordDisplayArea(geometry: GeometryProxy) -> some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 30, style: .continuous)
+                    .fill(.clear)
+                    .glassEffect(
+                        .regular.tint(.white.opacity(0.08)),
+                        in: RoundedRectangle(cornerRadius: 30, style: .continuous)
+                    )
+
+                VStack(spacing: 12) {
+                    Spacer(minLength: 18)
+
+                    WordDisplay(
+                        word: engine.currentWord,
+                        usesChunkLayout: wordDisplayMode == .threeWordChunk
+                    )
+                    .frame(maxWidth: min(geometry.size.width * 0.86, 640))
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        engine.toggle()
+                    }
+
+                    Spacer(minLength: 10)
+                }
+                .padding(.horizontal, 10)
+            }
+            .frame(
+                maxWidth: min(geometry.size.width * 0.94, 760),
+                minHeight: 260,
+                maxHeight: min(max(290, geometry.size.height * 0.42), 420)
+            )
+            .shadow(color: .black.opacity(0.26), radius: 26, y: 14)
+
             if engine.showSentenceContext && !engine.currentSentenceWords.isEmpty {
                 SentenceContextView(
                     words: engine.currentSentenceWords,
                     currentWordIndex: engine.currentWordIndexInSentence
                 )
                 .frame(
-                    maxWidth: min(geometry.size.width * 0.94, 680),
-                    minHeight: 108,
-                    maxHeight: 108,
+                    maxWidth: min(geometry.size.width * 0.94, 760),
+                    minHeight: 98,
+                    maxHeight: 98,
                     alignment: .top
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
@@ -216,17 +248,6 @@ struct RSVPView: View {
                         )
                 }
             }
-
-            WordDisplay(
-                word: engine.currentWord,
-                usesChunkLayout: wordDisplayMode == .threeWordChunk
-            )
-                .frame(maxWidth: min(geometry.size.width * 0.9, 680))
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    engine.toggle()
-                }
-                .shadow(color: .black.opacity(0.24), radius: 26, y: 14)
         }
     }
 
