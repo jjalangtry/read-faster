@@ -59,6 +59,8 @@ Xcode Cloud auto-bumps the version on every build using `ci_scripts/ci_post_clon
 
 When writing commit messages, include `[minor]` or `[major]` in the **subject line** (first line) if the change warrants it. Never put these tags in the commit body — only the subject is checked. Most commits should bump patch (no tag needed).
 
+**Important:** The script reads the base version from `project.yml`. After any push, you **must update `project.yml` and `project.pbxproj`** to match the new version so subsequent builds start from the correct base. Always include the version update in the same commit.
+
 ### Full build (macOS only)
 
 On macOS with Xcode installed:
