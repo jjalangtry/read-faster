@@ -23,7 +23,7 @@ struct PlayPauseButton: View {
     }
 }
 
-// MARK: - Transport Button (skip backward / forward)
+// MARK: - Transport Button
 
 struct TransportButton: View {
     let icon: String
@@ -43,23 +43,14 @@ struct TransportButton: View {
     }
 }
 
-// MARK: - WPM Control (Podcast-style speed)
+// MARK: - WPM Control
 
 struct WPMControl: View {
     @Binding var wpm: Int
     @State private var isExpanded = false
     @State private var sliderValue: Double = 300
 
-    @State private var decreaseTimer: Timer?
-    @State private var increaseTimer: Timer?
-    @State private var tickCount = 0
-    @State private var isDecreasePressed = false
-    @State private var isIncreasePressed = false
-
     private let step = 25
-    private let holdDelay: TimeInterval = 0.25
-    private let initialTickInterval: TimeInterval = 0.12
-    private let minimumTickInterval: TimeInterval = 0.04
 
     var body: some View {
         Group {
@@ -155,56 +146,120 @@ struct WPMControl: View {
     }
 }
 
+// MARK: - Display Mode Bar (1-word / 3-word + paragraph toggle)
+
+struct DisplayModeBar: View {
+    @Binding var wordDisplayModeRaw: String
+    @Binding var showContext: Bool
+
+    private var wordMode: WordDisplayMode {
+        WordDisplayMode(rawValue: wordDisplayModeRaw) ?? .singleWord
+    }
+
+    var body: some View {
+        HStack(spacing: 6) {
+            chipButton(
+                label: "1 Word",
+                icon: "text.word.spacing",
+                active: wordMode == .singleWord
+            ) {
+                wordDisplayModeRaw = WordDisplayMode.singleWord.rawValue
+            }
+
+            chipButton(
+                label: "3 Words",
+                icon: "text.line.first.and.arrowtriangle.forward",
+                active: wordMode == .threeWordChunk
+            ) {
+                wordDisplayModeRaw = WordDisplayMode.threeWordChunk.rawValue
+            }
+
+            Divider().frame(height: 20).opacity(0.3)
+
+            chipButton(
+                label: "Context",
+                icon: "text.alignleft",
+                active: showContext
+            ) {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    showContext.toggle()
+                }
+            }
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 4)
+        .glassEffect(.regular, in: .capsule)
+        #if os(iOS)
+        .sensoryFeedback(.selection, trigger: wordDisplayModeRaw)
+        .sensoryFeedback(.selection, trigger: showContext)
+        #endif
+    }
+
+    @ViewBuilder
+    private func chipButton(
+        label: String,
+        icon: String,
+        active: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 11, weight: .medium))
+                Text(label)
+                    .font(.system(size: 12, weight: .medium))
+            }
+            .foregroundStyle(active ? .primary : .secondary)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background {
+                if active {
+                    Capsule().fill(Color.accentColor.opacity(0.18))
+                }
+            }
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 // MARK: - Reading Mode Selector
 
 struct ReadingModeSelector: View {
     let currentMode: ReadingMode
     let onModeChange: (ReadingMode) -> Void
 
-    @Namespace private var modeNS
-
     var body: some View {
-        GlassEffectContainer {
-            HStack(spacing: 4) {
-                ForEach(ReadingMode.allCases) { mode in
-                    ModeChip(
-                        mode: mode,
-                        isSelected: mode == currentMode,
-                        namespace: modeNS,
-                        action: { onModeChange(mode) }
+        HStack(spacing: 4) {
+            ForEach(ReadingMode.allCases) { mode in
+                Button {
+                    onModeChange(mode)
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: mode.icon)
+                            .font(.system(size: 11, weight: .medium))
+                        Text(mode.displayName)
+                            .font(.system(size: 12, weight: .medium))
+                    }
+                    .foregroundStyle(
+                        mode == currentMode ? .primary : .secondary
                     )
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background {
+                        if mode == currentMode {
+                            Capsule()
+                                .fill(Color.accentColor.opacity(0.18))
+                        }
+                    }
                 }
+                .buttonStyle(.plain)
             }
         }
-    }
-}
-
-struct ModeChip: View {
-    let mode: ReadingMode
-    let isSelected: Bool
-    var namespace: Namespace.ID
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 5) {
-                Image(systemName: mode.icon)
-                    .font(.system(size: 13, weight: .medium))
-
-                if isSelected {
-                    Text(mode.displayName)
-                        .font(AppFont.medium(size: 13))
-                }
-            }
-            .padding(.horizontal, isSelected ? 14 : 10)
-            .padding(.vertical, 8)
-        }
-        .buttonStyle(.plain)
-        .glassEffect(
-            isSelected ? .regular.tint(.accentColor).interactive() : .regular,
-            in: .capsule
-        )
-        .glassEffectID(mode.id, in: namespace)
-        .animation(.easeInOut(duration: 0.25), value: isSelected)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 4)
+        .glassEffect(.regular, in: .capsule)
+        #if os(iOS)
+        .sensoryFeedback(.selection, trigger: currentMode)
+        #endif
     }
 }

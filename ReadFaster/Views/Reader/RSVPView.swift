@@ -1,15 +1,6 @@
 import SwiftUI
 import SwiftData
 
-// Apple Music "Now Playing" layout:
-//   [artwork]  →  RSVP word display
-//   title / artist
-//   scrub bar  (standard Slider)
-//   elapsed … remaining
-//   ◁   ▶︎   ▷   (transport)
-//   speed control
-//   reading mode
-
 struct RSVPView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -32,22 +23,16 @@ struct RSVPView: View {
 
     var body: some View {
         GeometryReader { geo in
+            let isLandscape = geo.size.width > geo.size.height
+
             ZStack {
                 backgroundGradient.ignoresSafeArea()
 
-                VStack(spacing: 0) {
-                    Spacer(minLength: 4)
-
-                    // "Artwork" — RSVP word display
-                    rsvpHero(geometry: geo)
-
-                    Spacer(minLength: 20)
-
-                    // Everything below the hero
-                    controlStack(geometry: geo)
-                        .padding(.bottom, 12)
+                if isLandscape {
+                    landscapeLayout(geometry: geo)
+                } else {
+                    portraitLayout(geometry: geo)
                 }
-                .padding(.horizontal, 24)
             }
             .contentShape(Rectangle())
             #if os(iOS)
@@ -125,29 +110,70 @@ struct RSVPView: View {
         #endif
     }
 
-    // MARK: - Toolbar
+    // MARK: - Portrait Layout
+
+    @ViewBuilder
+    private func portraitLayout(geometry: GeometryProxy) -> some View {
+        VStack(spacing: 0) {
+            Spacer(minLength: 4)
+            rsvpHero(geometry: geometry)
+            Spacer(minLength: 16)
+            controlStack(geometry: geometry)
+                .padding(.bottom, 10)
+        }
+        .padding(.horizontal, 24)
+    }
+
+    // MARK: - Landscape Layout
+
+    @ViewBuilder
+    private func landscapeLayout(geometry: GeometryProxy) -> some View {
+        HStack(spacing: 20) {
+            rsvpHero(geometry: geometry)
+                .frame(maxWidth: geometry.size.width * 0.5)
+
+            VStack(spacing: 0) {
+                Spacer(minLength: 4)
+                controlStack(geometry: geometry)
+                Spacer(minLength: 4)
+            }
+            .frame(maxWidth: geometry.size.width * 0.45)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 8)
+    }
+
+    // MARK: - Toolbar (… overflow menu)
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
-        ToolbarItemGroup(placement: .primaryAction) {
-            Button { toggleChunkMode() } label: {
-                Image(systemName: wordDisplayMode == .threeWordChunk
-                      ? "text.justify" : "text.justify.left")
-            }
-
-            Button { showingBookmarks = true } label: {
-                Image(systemName: book.bookmarks.isEmpty
-                      ? "bookmark" : "bookmark.fill")
-            }
-
-            if book.hasChapters {
-                Button { showingChapters = true } label: {
-                    Image(systemName: "list.bullet.indent")
+        ToolbarItem(placement: .primaryAction) {
+            Menu {
+                Button {
+                    showingBookmarks = true
+                } label: {
+                    Label(
+                        "Bookmarks",
+                        systemImage: book.bookmarks.isEmpty
+                            ? "bookmark" : "bookmark.fill"
+                    )
                 }
-            }
 
-            Button { showingSettings = true } label: {
-                Image(systemName: "gear")
+                if book.hasChapters {
+                    Button {
+                        showingChapters = true
+                    } label: {
+                        Label("Chapters", systemImage: "list.bullet.indent")
+                    }
+                }
+
+                Button {
+                    showingSettings = true
+                } label: {
+                    Label("Settings", systemImage: "gear")
+                }
+            } label: {
+                Image(systemName: "ellipsis")
             }
         }
     }
@@ -174,11 +200,11 @@ struct RSVPView: View {
         }
     }
 
-    // MARK: - RSVP Hero (= Album Artwork)
+    // MARK: - RSVP Hero
 
     @ViewBuilder
     private func rsvpHero(geometry: GeometryProxy) -> some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 14) {
             if engine.showSentenceContext
                 && !engine.currentSentenceWords.isEmpty {
                 SentenceContextView(
@@ -191,7 +217,6 @@ struct RSVPView: View {
                     alignment: .top
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 14))
-                .opacity(controlsOpacity)
             }
 
             WordDisplay(
@@ -204,46 +229,38 @@ struct RSVPView: View {
         }
     }
 
-    // MARK: - Control Stack (title → scrubber → transport → speed → mode)
+    // MARK: - Control Stack
 
     @ViewBuilder
     private func controlStack(geometry: GeometryProxy) -> some View {
         let maxW = min(geometry.size.width - 48, 500.0)
 
         VStack(spacing: 0) {
-            // Title + Author (like song title / artist in Apple Music)
             titleBlock
                 .frame(maxWidth: maxW, alignment: .leading)
                 .opacity(controlsOpacity)
-                .padding(.bottom, 16)
+                .padding(.bottom, 14)
 
-            // Scrub bar — standard system Slider
             scrubBar
                 .frame(maxWidth: maxW)
                 .opacity(controlsOpacity)
 
-            // Elapsed / remaining time
             timeRow
                 .frame(maxWidth: maxW)
                 .opacity(controlsOpacity)
-                .padding(.bottom, 20)
+                .padding(.bottom, 18)
 
-            // Transport: ◁  ▶︎  ▷
             transportControls
                 .frame(maxWidth: maxW)
-                .padding(.bottom, 24)
+                .padding(.bottom, 20)
 
-            // Speed control
             WPMControl(wpm: $engine.wordsPerMinute)
                 .frame(maxWidth: maxW)
                 .opacity(controlsOpacity)
-                .padding(.bottom, 16)
+                .padding(.bottom, 12)
 
-            // Reading mode
-            ReadingModeSelector(currentMode: engine.currentMode) { mode in
-                engine.applyMode(mode)
-            }
-            .opacity(controlsOpacity)
+            modeBar
+                .opacity(controlsOpacity)
         }
     }
 
@@ -254,7 +271,6 @@ struct RSVPView: View {
             Text(book.title)
                 .font(.system(size: 21, weight: .bold))
                 .lineLimit(1)
-                .foregroundStyle(.primary)
 
             if let author = book.author, !author.isEmpty {
                 Text(author)
@@ -265,7 +281,7 @@ struct RSVPView: View {
         }
     }
 
-    // MARK: - Scrub Bar (standard system Slider)
+    // MARK: - Scrub Bar
 
     private var scrubBar: some View {
         Slider(
@@ -293,9 +309,7 @@ struct RSVPView: View {
             Text(elapsedPositionText)
                 .font(.system(size: 11, weight: .medium, design: .monospaced))
                 .foregroundStyle(.secondary)
-
             Spacer()
-
             Text(timeRemainingText ?? "")
                 .font(.system(size: 11, weight: .medium, design: .monospaced))
                 .foregroundStyle(.secondary)
@@ -309,36 +323,39 @@ struct RSVPView: View {
         GlassEffectContainer {
             HStack {
                 Spacer()
-
                 TransportButton(
                     icon: "backward.fill",
                     disabled: !engine.hasContent || engine.isAtStart,
                     size: 44
-                ) {
-                    engine.previousSentence()
-                }
-
+                ) { engine.previousSentence() }
                 Spacer()
-
                 PlayPauseButton(
                     isPlaying: engine.isPlaying,
                     disabled: !engine.hasContent,
                     size: 56
-                ) {
-                    engine.toggle()
-                }
-
+                ) { engine.toggle() }
                 Spacer()
-
                 TransportButton(
                     icon: "forward.fill",
                     disabled: engine.isAtEnd,
                     size: 44
-                ) {
-                    engine.nextSentence()
-                }
-
+                ) { engine.nextSentence() }
                 Spacer()
+            }
+        }
+    }
+
+    // MARK: - Mode Bar (display + context + speed)
+
+    private var modeBar: some View {
+        VStack(spacing: 8) {
+            DisplayModeBar(
+                wordDisplayModeRaw: $wordDisplayModeRaw,
+                showContext: $engine.showSentenceContext
+            )
+
+            ReadingModeSelector(currentMode: engine.currentMode) { mode in
+                engine.applyMode(mode)
             }
         }
     }
