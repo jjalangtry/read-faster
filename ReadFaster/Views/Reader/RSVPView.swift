@@ -105,7 +105,7 @@ struct RSVPView: View {
         #endif
     }
 
-    // MARK: - Portrait Layout
+    // MARK: - Layouts
 
     @ViewBuilder
     private func portraitLayout(geometry: GeometryProxy) -> some View {
@@ -118,8 +118,6 @@ struct RSVPView: View {
         }
         .padding(.horizontal, 24)
     }
-
-    // MARK: - Landscape Layout
 
     @ViewBuilder
     private func landscapeLayout(geometry: GeometryProxy) -> some View {
@@ -139,25 +137,20 @@ struct RSVPView: View {
         .padding(.horizontal, 20)
     }
 
-    // MARK: - Toolbar (… overflow menu)
+    // MARK: - Toolbar
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .primaryAction) {
             Menu {
-                Button {
-                    showingBookmarks = true
-                } label: {
+                Button { showingBookmarks = true } label: {
                     Label(
                         "Bookmarks",
                         systemImage: book.bookmarks.isEmpty
                             ? "bookmark" : "bookmark.fill"
                     )
                 }
-
-                Button {
-                    showingSettings = true
-                } label: {
+                Button { showingSettings = true } label: {
                     Label("Settings", systemImage: "gear")
                 }
             } label: {
@@ -175,7 +168,6 @@ struct RSVPView: View {
             #else
             Color(UIColor.systemBackground)
             #endif
-
             LinearGradient(
                 colors: [
                     Color.accentColor.opacity(0.06),
@@ -229,7 +221,7 @@ struct RSVPView: View {
                 .opacity(controlsOpacity)
                 .padding(.bottom, 14)
 
-            scrubBar
+            chapterScrubBar
                 .frame(maxWidth: maxW)
                 .opacity(controlsOpacity)
 
@@ -238,14 +230,9 @@ struct RSVPView: View {
                 .opacity(controlsOpacity)
                 .padding(.bottom, 18)
 
-            transportControls
+            transportRow
                 .frame(maxWidth: maxW)
-                .padding(.bottom, 20)
-
-            WPMControl(wpm: $engine.wordsPerMinute)
-                .frame(maxWidth: maxW)
-                .opacity(controlsOpacity)
-                .padding(.bottom, 12)
+                .padding(.bottom, 16)
 
             DisplayModeBar(
                 wordDisplayModeRaw: $wordDisplayModeRaw,
@@ -255,10 +242,10 @@ struct RSVPView: View {
         }
     }
 
-    // MARK: - Title Row (title + author + chapter picker)
+    // MARK: - Title Row
 
     private var titleRow: some View {
-        HStack(alignment: .top) {
+        HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(book.title)
                     .font(.system(size: 21, weight: .bold))
@@ -272,17 +259,17 @@ struct RSVPView: View {
                 }
             }
 
-            Spacer(minLength: 8)
+            Spacer(minLength: 4)
 
             if book.hasChapters {
-                chapterPicker
+                chapterButton
             }
         }
     }
 
-    // MARK: - Chapter Picker
+    // MARK: - Chapter Button (icon-only circle, spans both lines)
 
-    private var chapterPicker: some View {
+    private var chapterButton: some View {
         Menu {
             ForEach(book.chapters.flattened) { chapter in
                 Button {
@@ -292,35 +279,29 @@ struct RSVPView: View {
                         Text(chapter.title)
                         Spacer()
                         Text(chapterProgress(chapter))
-                            .foregroundStyle(.secondary)
                     }
                 }
             }
         } label: {
-            HStack(spacing: 4) {
-                Image(systemName: "list.bullet")
-                    .font(.system(size: 13, weight: .medium))
-                if let chapter = currentChapter {
-                    Text(chapter.title)
-                        .font(.system(size: 13, weight: .medium))
-                        .lineLimit(1)
-                }
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .glassEffect(.regular.interactive(), in: .capsule)
+            Image(systemName: "list.bullet")
+                .font(.system(size: 18, weight: .medium))
+                .frame(width: 48, height: 48)
+                .contentShape(Circle())
         }
+        .buttonStyle(.glass)
         #if os(iOS)
         .sensoryFeedback(.selection, trigger: currentChapter?.id)
         #endif
     }
 
-    // MARK: - Scrub Bar
+    // MARK: - Per-Chapter Scrub Bar
 
-    private var scrubBar: some View {
+    private var chapterScrubBar: some View {
         Slider(
             value: Binding(
-                get: { scrubbing ? scrubValue : engine.displayedProgress },
+                get: {
+                    scrubbing ? scrubValue : chapterRelativeProgress
+                },
                 set: { newValue in
                     scrubValue = newValue
                     if !scrubbing { scrubbing = true }
@@ -329,18 +310,18 @@ struct RSVPView: View {
             in: 0...1
         ) { editing in
             if !editing {
-                engine.seekToProgress(scrubValue)
+                seekToChapterRelative(scrubValue)
                 scrubbing = false
             }
         }
         .tint(.primary)
     }
 
-    // MARK: - Metadata Row (time + chapter info inline)
+    // MARK: - Metadata Row
 
     private var metadataRow: some View {
         HStack(spacing: 0) {
-            Text(elapsedPositionText)
+            Text(chapterPositionText)
                 .font(.system(size: 11, weight: .medium, design: .monospaced))
                 .foregroundStyle(.secondary)
 
@@ -363,31 +344,32 @@ struct RSVPView: View {
         .padding(.top, 2)
     }
 
-    // MARK: - Transport Controls
+    // MARK: - Transport Row (back | play | forward | wpm)
 
-    private var transportControls: some View {
-        GlassEffectContainer {
-            HStack {
-                Spacer()
-                TransportButton(
-                    icon: "backward.fill",
-                    disabled: !engine.hasContent || engine.isAtStart,
-                    size: 44
-                ) { engine.previousSentence() }
-                Spacer()
-                PlayPauseButton(
-                    isPlaying: engine.isPlaying,
-                    disabled: !engine.hasContent,
-                    size: 56
-                ) { engine.toggle() }
-                Spacer()
-                TransportButton(
-                    icon: "forward.fill",
-                    disabled: engine.isAtEnd,
-                    size: 44
-                ) { engine.nextSentence() }
-                Spacer()
-            }
+    private var transportRow: some View {
+        HStack(spacing: 0) {
+            Spacer()
+            TransportButton(
+                icon: "backward.fill",
+                disabled: !engine.hasContent || engine.isAtStart,
+                size: 44
+            ) { engine.previousSentence() }
+            Spacer()
+            PlayPauseButton(
+                isPlaying: engine.isPlaying,
+                disabled: !engine.hasContent,
+                size: 56
+            ) { engine.toggle() }
+            Spacer()
+            TransportButton(
+                icon: "forward.fill",
+                disabled: engine.isAtEnd,
+                size: 44
+            ) { engine.nextSentence() }
+            Spacer()
+            WPMButton(wpm: $engine.wordsPerMinute)
+                .opacity(controlsOpacity)
+            Spacer()
         }
     }
 }
@@ -452,26 +434,57 @@ extension RSVPView {
         book.chapters.currentChapter(for: engine.currentIndex)
     }
 
+    var chapterStartIndex: Int {
+        currentChapter?.startWordIndex ?? 0
+    }
+
+    var chapterEndIndex: Int {
+        let flat = book.chapters.flattened
+        guard let chapter = currentChapter,
+              let idx = flat.firstIndex(where: { $0.id == chapter.id })
+        else { return engine.totalWords }
+        return idx + 1 < flat.count
+            ? flat[idx + 1].startWordIndex
+            : engine.totalWords
+    }
+
+    var chapterRelativeProgress: Double {
+        let length = max(1, chapterEndIndex - chapterStartIndex)
+        let pos = max(0, engine.currentIndex - chapterStartIndex)
+        return Double(min(pos, length)) / Double(length)
+    }
+
+    func seekToChapterRelative(_ progress: Double) {
+        let length = chapterEndIndex - chapterStartIndex
+        let target = chapterStartIndex + Int(progress * Double(length))
+        engine.seek(to: min(max(target, chapterStartIndex), chapterEndIndex - 1))
+    }
+
     func chapterProgress(_ chapter: Chapter) -> String {
-        let allFlat = book.chapters.flattened
-        guard let idx = allFlat.firstIndex(where: { $0.id == chapter.id })
+        let flat = book.chapters.flattened
+        guard let idx = flat.firstIndex(where: { $0.id == chapter.id })
         else { return "" }
 
-        let chStart = chapter.startWordIndex
-        let chEnd = idx + 1 < allFlat.count
-            ? allFlat[idx + 1].startWordIndex
+        let start = chapter.startWordIndex
+        let end = idx + 1 < flat.count
+            ? flat[idx + 1].startWordIndex
             : engine.totalWords
-        let chLength = max(1, chEnd - chStart)
-        let read = max(0, min(engine.currentIndex - chStart, chLength))
-        let pct = Int(Double(read) / Double(chLength) * 100)
-        return "\(max(0, min(100, pct)))%"
+        let length = max(1, end - start)
+        let read = max(0, min(engine.currentIndex - start, length))
+        return "\(max(0, min(100, Int(Double(read) / Double(length) * 100))))%"
     }
 }
 
 // MARK: - Text Helpers & Engine Setup
 
 extension RSVPView {
-    var elapsedPositionText: String {
+    var chapterPositionText: String {
+        if book.hasChapters {
+            let length = max(1, chapterEndIndex - chapterStartIndex)
+            let pos = max(0, engine.currentIndex - chapterStartIndex)
+            let pct = min(100, max(0, Int(chapterRelativeProgress * 100)))
+            return "\(min(pos + 1, length)) / \(length) · \(pct)%"
+        }
         let total = engine.totalWords
         guard total > 0 else { return "0 / 0" }
         let cur = min(max(engine.currentIndex + 1, 1), total)
@@ -480,10 +493,15 @@ extension RSVPView {
     }
 
     var timeRemainingText: String? {
-        let left = max(
-            0,
-            engine.totalWords - (engine.currentIndex + engine.currentDisplayWordCount)
-        )
+        let left: Int
+        if book.hasChapters {
+            left = max(0, chapterEndIndex - engine.currentIndex)
+        } else {
+            left = max(
+                0,
+                engine.totalWords - (engine.currentIndex + engine.currentDisplayWordCount)
+            )
+        }
         guard left > 0, engine.wordsPerMinute > 0 else { return nil }
         let secs = Int(Double(left) / Double(engine.wordsPerMinute) * 60)
         let hours = secs / 3600
