@@ -51,7 +51,8 @@ private struct WPMPreset: Identifiable {
     var id: Int { wpm }
 
     var normalizedPosition: Double {
-        Double(wpm - RSVPEngine.minWPM) / Double(RSVPEngine.maxWPM - RSVPEngine.minWPM)
+        let range = Double(RSVPEngine.maxWPM - RSVPEngine.minWPM)
+        return Double(wpm - RSVPEngine.minWPM) / range
     }
 }
 
@@ -64,7 +65,7 @@ private let wpmPresets: [WPMPreset] = [
 
 private let wpmSnapThreshold = 40
 
-// MARK: - WPM Control (inline stepper with expandable tick-mark slider)
+// MARK: - WPM Control
 
 struct WPMControl: View {
     @Binding var wpm: Int
@@ -87,8 +88,6 @@ struct WPMControl: View {
             value: isExpanded
         )
     }
-
-    // MARK: Compact
 
     private var compactStepper: some View {
         HStack(spacing: 0) {
@@ -135,8 +134,6 @@ struct WPMControl: View {
         .sensoryFeedback(.selection, trigger: wpm)
         #endif
     }
-
-    // MARK: Expanded (slider with 4 tick marks on the track)
 
     private var expandedSlider: some View {
         VStack(spacing: 0) {
@@ -189,12 +186,10 @@ struct WPMControl: View {
 
     private var presetMarkers: some View {
         GeometryReader { geo in
-            let trackInset: CGFloat = 16
-            let usableWidth = geo.size.width - trackInset * 2
+            let inset: CGFloat = 16
+            let usable = geo.size.width - inset * 2
 
             ForEach(wpmPresets) { preset in
-                let xPos = trackInset + usableWidth * preset.normalizedPosition
-
                 Circle()
                     .fill(
                         isNear(preset.wpm)
@@ -202,7 +197,10 @@ struct WPMControl: View {
                             : Color.secondary.opacity(0.5)
                     )
                     .frame(width: 6, height: 6)
-                    .position(x: xPos, y: geo.size.height / 2)
+                    .position(
+                        x: inset + usable * preset.normalizedPosition,
+                        y: geo.size.height / 2
+                    )
             }
         }
         .frame(height: 28)
@@ -210,12 +208,10 @@ struct WPMControl: View {
 
     private var presetIcons: some View {
         GeometryReader { geo in
-            let trackInset: CGFloat = 16
-            let usableWidth = geo.size.width - trackInset * 2
+            let inset: CGFloat = 16
+            let usable = geo.size.width - inset * 2
 
             ForEach(wpmPresets) { preset in
-                let xPos = trackInset + usableWidth * preset.normalizedPosition
-
                 Button {
                     sliderValue = Double(preset.wpm)
                     wpm = preset.wpm
@@ -229,7 +225,10 @@ struct WPMControl: View {
                         )
                 }
                 .buttonStyle(.plain)
-                .position(x: xPos, y: geo.size.height / 2)
+                .position(
+                    x: inset + usable * preset.normalizedPosition,
+                    y: geo.size.height / 2
+                )
             }
         }
         .frame(height: 16)
@@ -240,7 +239,8 @@ struct WPMControl: View {
     }
 
     private func snapIfClose(_ value: Int) {
-        for preset in wpmPresets where abs(value - preset.wpm) <= wpmSnapThreshold {
+        for preset in wpmPresets
+        where abs(value - preset.wpm) <= wpmSnapThreshold {
             if lastSnappedPreset != preset.wpm {
                 lastSnappedPreset = preset.wpm
                 sliderValue = Double(preset.wpm)
@@ -252,13 +252,15 @@ struct WPMControl: View {
     }
 
     private func adjustWPM(by delta: Int) {
-        let clamped = min(RSVPEngine.maxWPM, max(RSVPEngine.minWPM, wpm + delta))
+        let clamped = min(
+            RSVPEngine.maxWPM, max(RSVPEngine.minWPM, wpm + delta)
+        )
         wpm = clamped
         sliderValue = Double(clamped)
     }
 }
 
-// MARK: - Display Mode Bar
+// MARK: - Display Mode Bar (icon-only for toolbar)
 
 struct DisplayModeBar: View {
     @Binding var wordDisplayModeRaw: String
@@ -269,27 +271,22 @@ struct DisplayModeBar: View {
     }
 
     var body: some View {
-        HStack(spacing: 6) {
-            chipButton(
-                label: "1 Word",
-                icon: "text.word.spacing",
+        HStack(spacing: 2) {
+            iconToggle(
+                icon: "1.circle",
                 active: wordMode == .singleWord
             ) {
                 wordDisplayModeRaw = WordDisplayMode.singleWord.rawValue
             }
 
-            chipButton(
-                label: "3 Words",
-                icon: "text.line.first.and.arrowtriangle.forward",
+            iconToggle(
+                icon: "3.circle",
                 active: wordMode == .threeWordChunk
             ) {
                 wordDisplayModeRaw = WordDisplayMode.threeWordChunk.rawValue
             }
 
-            Divider().frame(height: 20).opacity(0.3)
-
-            chipButton(
-                label: "Context",
+            iconToggle(
                 icon: "text.alignleft",
                 active: showContext
             ) {
@@ -298,9 +295,6 @@ struct DisplayModeBar: View {
                 }
             }
         }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 4)
-        .glassEffect(.regular, in: .capsule)
         #if os(iOS)
         .sensoryFeedback(.selection, trigger: wordDisplayModeRaw)
         .sensoryFeedback(.selection, trigger: showContext)
@@ -308,27 +302,17 @@ struct DisplayModeBar: View {
     }
 
     @ViewBuilder
-    private func chipButton(
-        label: String,
+    private func iconToggle(
         icon: String,
         active: Bool,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            HStack(spacing: 4) {
-                Image(systemName: icon)
-                    .font(.system(size: 11, weight: .medium))
-                Text(label)
-                    .font(.system(size: 12, weight: .medium))
-            }
-            .foregroundStyle(active ? .primary : .secondary)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background {
-                if active {
-                    Capsule().fill(Color.accentColor.opacity(0.18))
-                }
-            }
+            Image(systemName: active ? icon + ".fill" : icon)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(active ? .primary : .secondary)
+                .frame(width: 32, height: 32)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

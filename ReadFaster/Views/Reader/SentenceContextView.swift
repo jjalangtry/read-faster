@@ -3,90 +3,77 @@ import SwiftUI
 struct SentenceContextView: View {
     let words: [String]
     let currentWordIndex: Int
+    let allBookWords: [String]
+    let globalWordIndex: Int
 
-    @State private var wordFrames: [Int: CGRect] = [:]
-    @State private var contentHeight: CGFloat = 0
+    init(
+        words: [String],
+        currentWordIndex: Int,
+        allBookWords: [String] = [],
+        globalWordIndex: Int = 0
+    ) {
+        self.words = words
+        self.currentWordIndex = currentWordIndex
+        self.allBookWords = allBookWords
+        self.globalWordIndex = globalWordIndex
+    }
+
+    private var displayWords: [String] {
+        guard !allBookWords.isEmpty else { return words }
+        let window = 80
+        let start = max(0, globalWordIndex - window)
+        let end = min(allBookWords.count, globalWordIndex + window)
+        return Array(allBookWords[start..<end])
+    }
+
+    private var adjustedIndex: Int {
+        guard !allBookWords.isEmpty else { return currentWordIndex }
+        let window = 80
+        let start = max(0, globalWordIndex - window)
+        return globalWordIndex - start
+    }
 
     var body: some View {
-        if words.isEmpty {
+        if displayWords.isEmpty {
             EmptyView()
         } else {
             ScrollViewReader { proxy in
                 ScrollView(.vertical, showsIndicators: false) {
-                    ZStack(alignment: .topLeading) {
-                        ParagraphFlowLayout(spacing: 5, lineSpacing: 10) {
-                            ForEach(
-                                Array(words.enumerated()), id: \.offset
-                            ) { index, word in
-                                wordView(word: word, index: index)
-                                    .id(index)
-                                    .background(
-                                        GeometryReader { geo in
-                                            Color.clear.preference(
-                                                key: WordFramePreference.self,
-                                                value: [index: geo.frame(
-                                                    in: .named("ctx")
-                                                )]
-                                            )
-                                        }
-                                    )
-                            }
-                        }
-
-                        if let frame = wordFrames[currentWordIndex] {
-                            Capsule()
-                                .fill(Color.accentColor)
-                                .frame(width: frame.width, height: 2)
-                                .offset(x: frame.minX, y: frame.maxY + 1)
-                                .animation(
-                                    .easeOut(duration: 0.15),
-                                    value: currentWordIndex
-                                )
-                        }
-                    }
-                    .coordinateSpace(name: "ctx")
-                    .onPreferenceChange(WordFramePreference.self) { frames in
-                        wordFrames = frames
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(
-                        GeometryReader { geo in
-                            Color.clear.onAppear {
-                                contentHeight = geo.size.height
-                            }
-                            .onChange(of: words.count) { _, _ in
-                                contentHeight = geo.size.height
-                            }
-                        }
-                    )
+                    flowContent
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
                 }
-                .frame(maxHeight: min(contentHeight, 120))
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-                .onChange(of: currentWordIndex) { _, newIdx in
+                .onChange(of: adjustedIndex) { _, newIdx in
                     withAnimation(.easeOut(duration: 0.2)) {
                         proxy.scrollTo(newIdx, anchor: .center)
                     }
                 }
+                .onAppear {
+                    proxy.scrollTo(adjustedIndex, anchor: .center)
+                }
             }
+            .frame(height: 100)
         }
     }
 
-    @ViewBuilder
-    private func wordView(word: String, index: Int) -> some View {
-        let isCurrent = index == currentWordIndex
-        let isPast = index < currentWordIndex
+    private var flowContent: some View {
+        ParagraphFlowLayout(spacing: 5, lineSpacing: 8) {
+            ForEach(
+                Array(displayWords.enumerated()), id: \.offset
+            ) { index, word in
+                let isCurrent = index == adjustedIndex
+                let isPast = index < adjustedIndex
 
-        Text(word)
-            .font(AppFont.contextWord(highlighted: isCurrent))
-            .foregroundStyle(wordColor(isCurrent: isCurrent, isPast: isPast))
-            .animation(.easeOut(duration: 0.12), value: currentWordIndex)
-    }
-
-    private func wordColor(isCurrent: Bool, isPast: Bool) -> Color {
-        if isCurrent { return .primary }
-        if isPast { return .primary.opacity(0.45) }
-        return .primary.opacity(0.3)
+                Text(word)
+                    .id(index)
+                    .font(AppFont.contextWord(highlighted: isCurrent))
+                    .foregroundStyle(
+                        isCurrent ? .primary
+                            : isPast ? .primary.opacity(0.45)
+                            : .primary.opacity(0.3)
+                    )
+            }
+        }
     }
 }
 
@@ -106,7 +93,7 @@ struct WordFramePreference: PreferenceKey {
 
 struct ParagraphFlowLayout: Layout {
     var spacing: CGFloat = 5
-    var lineSpacing: CGFloat = 10
+    var lineSpacing: CGFloat = 8
 
     func sizeThatFits(
         proposal: ProposedViewSize, subviews: Subviews, cache: inout ()
@@ -186,24 +173,4 @@ struct ParagraphFlowLayout: Layout {
         let positions: [CGPoint]
         let sizes: [CGSize]
     }
-}
-
-#Preview("Animated underline") {
-    struct PreviewWrapper: View {
-        @State private var index = 5
-        let words = ["The", "quick", "brown", "fox", "jumps",
-                     "over", "the", "lazy", "dog."]
-        var body: some View {
-            VStack(spacing: 30) {
-                SentenceContextView(words: words, currentWordIndex: index)
-                    .frame(maxWidth: 400)
-                HStack {
-                    Button("Prev") { if index > 0 { index -= 1 } }
-                    Button("Next") { if index < words.count - 1 { index += 1 } }
-                }
-            }
-            .padding()
-        }
-    }
-    return PreviewWrapper()
 }

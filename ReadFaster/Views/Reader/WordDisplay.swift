@@ -53,7 +53,7 @@ struct WordDisplay: View {
         .minimumScaleFactor(0.5)
     }
 
-    // MARK: - Chunk Mode (HStack centering, no independent scaling)
+    // MARK: - Chunk Mode (centered focal, shrink-to-fit)
 
     private var chunkView: some View {
         let parts = chunkDisplayParts
@@ -64,6 +64,7 @@ struct WordDisplay: View {
                 Text(parts.leadingText)
                     .foregroundStyle(.primary)
                     .frame(minWidth: 0, maxWidth: .infinity, alignment: .trailing)
+                    .minimumScaleFactor(0.4)
 
                 Text(String(focal))
                     .foregroundStyle(.red)
@@ -71,10 +72,12 @@ struct WordDisplay: View {
                 Text(parts.trailingText)
                     .foregroundStyle(.primary)
                     .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+                    .minimumScaleFactor(0.4)
             } else {
                 Text(parts.before + parts.anchor.fullWord + parts.after)
                     .foregroundStyle(.primary)
                     .frame(maxWidth: .infinity)
+                    .minimumScaleFactor(0.4)
             }
         }
         .font(chunkFont)

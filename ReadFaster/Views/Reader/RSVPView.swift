@@ -193,21 +193,24 @@ struct RSVPView: View {
         }
     }
 
-    // MARK: - RSVP Hero (sentence context + word display, pinned layout)
+    // MARK: - RSVP Hero (pinned word display, scrolling context above)
 
     @ViewBuilder
     private func rsvpHero(geometry: GeometryProxy) -> some View {
         let heroWidth = min(geometry.size.width - 48, 640.0)
 
         VStack(spacing: 0) {
-            if engine.showSentenceContext
-                && !engine.currentSentenceWords.isEmpty {
+            Spacer(minLength: 0)
+
+            if engine.showSentenceContext {
                 SentenceContextView(
                     words: engine.currentSentenceWords,
-                    currentWordIndex: engine.currentWordIndexInSentence
+                    currentWordIndex: engine.currentWordIndexInSentence,
+                    allBookWords: book.words,
+                    globalWordIndex: engine.currentIndex
                 )
                 .frame(maxWidth: heroWidth)
-                .padding(.bottom, 14)
+                .padding(.bottom, 10)
             }
 
             WordDisplay(
@@ -473,6 +476,7 @@ extension RSVPView {
         if let curID = currentChapter?.id {
             chapterPositions[curID] = engine.currentIndex
         }
+        scrubbing = false
         if let saved = chapterPositions[chapter.id] {
             engine.seek(to: saved)
         } else {
