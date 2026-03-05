@@ -118,7 +118,7 @@ struct RSVPView: View {
         VStack(spacing: 0) {
             Spacer(minLength: 4)
             rsvpHero(geometry: geometry)
-            Spacer(minLength: 16)
+            Spacer(minLength: 24)
             controlStack(geometry: geometry)
                 .padding(.bottom, 10)
         }
@@ -186,7 +186,7 @@ struct RSVPView: View {
         }
     }
 
-    // MARK: - RSVP Hero (pinned box, context fills 80% of space above)
+    // MARK: - RSVP Hero
 
     @ViewBuilder
     private func rsvpHero(geometry: GeometryProxy) -> some View {
@@ -196,12 +196,14 @@ struct RSVPView: View {
             if engine.showSentenceContext {
                 SentenceContextView(
                     allBookWords: book.words,
-                    globalWordIndex: engine.currentIndex
+                    globalWordIndex: engine.currentIndex,
+                    highlightCount: engine.currentDisplayWordCount
                 )
                 .frame(maxWidth: heroWidth)
                 .clipShape(RoundedRectangle(cornerRadius: 14))
-                .padding(.bottom, 16)
             }
+
+            Spacer(minLength: 20).frame(maxHeight: 24)
 
             WordDisplay(
                 word: engine.currentWord,

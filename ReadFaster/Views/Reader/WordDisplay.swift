@@ -10,6 +10,8 @@ struct WordDisplay: View {
         ORPWord(word: word)
     }
 
+    private let boxHeight: CGFloat = 180
+
     var body: some View {
         VStack(spacing: 0) {
             if !usesChunkLayout {
@@ -20,14 +22,14 @@ struct WordDisplay: View {
         }
         .padding(.horizontal, 28)
         .padding(.vertical, 44)
-        .frame(minHeight: 180)
+        .frame(height: boxHeight)
         .clipped()
         .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 28))
         .accessibilityElement()
         .accessibilityLabel(word)
     }
 
-    // MARK: - Single Word (HStack centering keeps focal in center)
+    // MARK: - Single Word
 
     private var singleWordView: some View {
         HStack(spacing: 0) {
@@ -49,7 +51,7 @@ struct WordDisplay: View {
         .minimumScaleFactor(0.5)
     }
 
-    // MARK: - Chunk Mode (uniform scale, then offset to center focal)
+    // MARK: - Chunk Mode (uniform scale, offset to center focal)
 
     @State private var focalOffset: CGFloat = 0
 
@@ -58,7 +60,7 @@ struct WordDisplay: View {
         let chunkFont = AppFont.rsvpPhrase(size: max(30, fontSize * 0.72))
 
         return GeometryReader { containerGeo in
-            let containerCenter = containerGeo.size.width / 2
+            let center = containerGeo.size.width / 2
 
             HStack(spacing: 0) {
                 Text(parts.leadingText)
@@ -70,18 +72,11 @@ struct WordDisplay: View {
                         .background(
                             GeometryReader { focalGeo in
                                 Color.clear.onAppear {
-                                    let focalCenter = focalGeo.frame(
-                                        in: .named("chunkContainer")
-                                    ).midX
-                                    focalOffset = containerCenter - focalCenter
+                                    updateOffset(focalGeo, center: center)
                                 }
                                 .onChange(of: word) { _, _ in
                                     DispatchQueue.main.async {
-                                        let focalCenter = focalGeo.frame(
-                                            in: .named("chunkContainer")
-                                        ).midX
-                                        focalOffset = containerCenter
-                                            - focalCenter
+                                        updateOffset(focalGeo, center: center)
                                     }
                                 }
                             }
@@ -103,7 +98,11 @@ struct WordDisplay: View {
             )
             .coordinateSpace(name: "chunkContainer")
         }
-        .frame(maxWidth: .infinity, minHeight: 72)
+    }
+
+    private func updateOffset(_ geo: GeometryProxy, center: CGFloat) {
+        let mid = geo.frame(in: .named("chunkContainer")).midX
+        focalOffset = center - mid
     }
 
     private var chunkDisplayParts: ChunkDisplayParts {

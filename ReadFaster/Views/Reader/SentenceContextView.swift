@@ -3,8 +3,9 @@ import SwiftUI
 struct SentenceContextView: View {
     let allBookWords: [String]
     let globalWordIndex: Int
+    var highlightCount: Int = 1
 
-    private let contextWindow = 120
+    private let contextWindow = 150
 
     private var displayRange: Range<Int> {
         let start = max(0, globalWordIndex - contextWindow)
@@ -16,6 +17,14 @@ struct SentenceContextView: View {
         globalWordIndex - displayRange.lowerBound
     }
 
+    private var highlightedIndices: Set<Int> {
+        let count = min(highlightCount, displayRange.count - localIndex)
+        return Set(localIndex..<(localIndex + count))
+    }
+
+    @State private var frames: [Int: CGRect] = [:]
+    @State private var lastScrolledLine: CGFloat = 0
+
     var body: some View {
         if allBookWords.isEmpty {
             EmptyView()
@@ -23,21 +32,19 @@ struct SentenceContextView: View {
             ScrollViewReader { proxy in
                 ScrollView(.vertical, showsIndicators: false) {
                     ZStack(alignment: .topLeading) {
-                        wordFlow
-
-                        underline
+                        textFlow
+                        underlines
                     }
                     .coordinateSpace(name: "ctx")
                     .onPreferenceChange(WordFramePreference.self) { val in
                         frames = val
                     }
                     .padding(.horizontal, 20)
-                    .padding(.vertical, 40)
+                    .padding(.vertical, 30)
                 }
+                .scrollDisabled(true)
                 .onChange(of: globalWordIndex) { _, _ in
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        proxy.scrollTo(localIndex, anchor: .center)
-                    }
+                    scrollIfNeeded(proxy)
                 }
                 .onAppear {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
@@ -48,10 +55,19 @@ struct SentenceContextView: View {
         }
     }
 
-    @State private var frames: [Int: CGRect] = [:]
+    private func scrollIfNeeded(_ proxy: ScrollViewProxy) {
+        guard let frame = frames[localIndex] else { return }
+        let lineY = frame.minY
+        if lineY != lastScrolledLine {
+            lastScrolledLine = lineY
+            withAnimation(.easeInOut(duration: 0.35)) {
+                proxy.scrollTo(localIndex, anchor: .center)
+            }
+        }
+    }
 
-    private var wordFlow: some View {
-        ParagraphFlowLayout(spacing: 5, lineSpacing: 10) {
+    private var textFlow: some View {
+        ContextFlowLayout(spacing: 5, lineSpacing: 10) {
             ForEach(
                 Array(allBookWords[displayRange].enumerated()),
                 id: \.offset
@@ -60,7 +76,7 @@ struct SentenceContextView: View {
                     .id(index)
                     .font(AppFont.contextWord(highlighted: false))
                     .foregroundColor(
-                        index == localIndex
+                        highlightedIndices.contains(index)
                             ? Color.primary
                             : index < localIndex
                                 ? Color.primary.opacity(0.5)
@@ -79,13 +95,17 @@ struct SentenceContextView: View {
     }
 
     @ViewBuilder
-    private var underline: some View {
-        if let frame = frames[localIndex] {
-            Capsule()
-                .fill(Color.accentColor)
-                .frame(width: frame.width, height: 2)
-                .offset(x: frame.minX, y: frame.maxY + 1)
-                .animation(.easeInOut(duration: 0.25), value: localIndex)
+    private var underlines: some View {
+        ForEach(Array(highlightedIndices.sorted()), id: \.self) { idx in
+            if let frame = frames[idx] {
+                Capsule()
+                    .fill(Color.accentColor)
+                    .frame(width: frame.width, height: 2)
+                    .offset(x: frame.minX, y: frame.maxY + 1)
+                    .animation(
+                        .easeInOut(duration: 0.2), value: globalWordIndex
+                    )
+            }
         }
     }
 }
@@ -101,9 +121,9 @@ struct WordFramePreference: PreferenceKey {
     }
 }
 
-// MARK: - Flow Layout
+// MARK: - Left-aligned flow layout (no centering — like source text)
 
-struct ParagraphFlowLayout: Layout {
+struct ContextFlowLayout: Layout {
     var spacing: CGFloat = 5
     var lineSpacing: CGFloat = 10
 
@@ -132,34 +152,21 @@ struct ParagraphFlowLayout: Layout {
         let maxW = proposal.width ?? .infinity
         var positions: [CGPoint] = []
         var sizes: [CGSize] = []
-        var lineWidths: [CGFloat] = []
-        var lineStarts: [Int] = [0]
         var curX: CGFloat = 0
         var curY: CGFloat = 0
         var lineH: CGFloat = 0
-        var curLW: CGFloat = 0
 
-        for (idx, sub) in subviews.enumerated() {
+        for sub in subviews {
             let size = sub.sizeThatFits(.unspecified)
             sizes.append(size)
             if curX + size.width > maxW && curX > 0 {
-                lineWidths.append(curLW - spacing)
-                lineStarts.append(idx)
-                curX = 0; curY += lineH + lineSpacing
-                lineH = 0; curLW = 0
+                curX = 0
+                curY += lineH + lineSpacing
+                lineH = 0
             }
             positions.append(CGPoint(x: curX, y: curY))
             curX += size.width + spacing
-            curLW = curX
             lineH = max(lineH, size.height)
-        }
-        lineWidths.append(curLW - spacing)
-
-        for (lineIdx, startIdx) in lineStarts.enumerated() {
-            let endIdx = lineIdx + 1 < lineStarts.count
-                ? lineStarts[lineIdx + 1] : positions.count
-            let off = max(0, (maxW - lineWidths[lineIdx]) / 2)
-            for idx in startIdx..<endIdx { positions[idx].x += off }
         }
 
         return LayoutResult(
