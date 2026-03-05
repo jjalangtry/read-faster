@@ -67,10 +67,10 @@ struct SentenceContextView: View {
                 Text(word)
                     .id(index)
                     .font(AppFont.contextWord(highlighted: isCurrent))
-                    .foregroundStyle(
-                        isCurrent ? .primary
-                            : isPast ? .primary.opacity(0.45)
-                            : .primary.opacity(0.3)
+                    .foregroundColor(
+                        isCurrent ? Color.primary
+                            : isPast ? Color.primary.opacity(0.45)
+                            : Color.primary.opacity(0.3)
                     )
             }
         }
