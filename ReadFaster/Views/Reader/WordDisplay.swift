@@ -21,10 +21,13 @@ struct WordDisplay: View {
         .padding(.horizontal, 28)
         .padding(.vertical, 44)
         .frame(minHeight: 180)
+        .clipped()
         .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 28))
         .accessibilityElement()
         .accessibilityLabel(word)
     }
+
+    // MARK: - Single Word (HStack centering keeps focal in center)
 
     private var singleWordView: some View {
         HStack(spacing: 0) {
@@ -46,26 +49,61 @@ struct WordDisplay: View {
         .minimumScaleFactor(0.5)
     }
 
-    // Chunk: single concatenated Text so minimumScaleFactor shrinks
-    // all characters uniformly (red letter included).
+    // MARK: - Chunk Mode (uniform scale, then offset to center focal)
+
+    @State private var focalOffset: CGFloat = 0
+
     private var chunkView: some View {
-        chunkText
-            .font(AppFont.rsvpPhrase(size: max(30, fontSize * 0.72)))
+        let parts = chunkDisplayParts
+        let chunkFont = AppFont.rsvpPhrase(size: max(30, fontSize * 0.72))
+
+        return GeometryReader { containerGeo in
+            let containerCenter = containerGeo.size.width / 2
+
+            HStack(spacing: 0) {
+                Text(parts.leadingText)
+                    .foregroundColor(.primary)
+
+                if let focal = parts.anchor.focal {
+                    Text(String(focal))
+                        .foregroundColor(.red)
+                        .background(
+                            GeometryReader { focalGeo in
+                                Color.clear.onAppear {
+                                    let focalCenter = focalGeo.frame(
+                                        in: .named("chunkContainer")
+                                    ).midX
+                                    focalOffset = containerCenter - focalCenter
+                                }
+                                .onChange(of: word) { _, _ in
+                                    DispatchQueue.main.async {
+                                        let focalCenter = focalGeo.frame(
+                                            in: .named("chunkContainer")
+                                        ).midX
+                                        focalOffset = containerCenter
+                                            - focalCenter
+                                    }
+                                }
+                            }
+                        )
+                }
+
+                Text(parts.trailingText)
+                    .foregroundColor(.primary)
+            }
+            .font(chunkFont)
             .lineLimit(1)
             .minimumScaleFactor(0.35)
-            .frame(maxWidth: .infinity, minHeight: 72)
-            .multilineTextAlignment(.center)
-    }
-
-    private var chunkText: Text {
-        let parts = chunkDisplayParts
-        guard let focal = parts.anchor.focal else {
-            return Text(parts.before + parts.anchor.fullWord + parts.after)
-                .foregroundColor(.primary)
+            .fixedSize()
+            .offset(x: focalOffset)
+            .frame(
+                width: containerGeo.size.width,
+                height: containerGeo.size.height,
+                alignment: .center
+            )
+            .coordinateSpace(name: "chunkContainer")
         }
-        return Text(parts.leadingText).foregroundColor(.primary)
-            + Text(String(focal)).foregroundColor(.red)
-            + Text(parts.trailingText).foregroundColor(.primary)
+        .frame(maxWidth: .infinity, minHeight: 72)
     }
 
     private var chunkDisplayParts: ChunkDisplayParts {

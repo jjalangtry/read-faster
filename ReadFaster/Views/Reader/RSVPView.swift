@@ -192,37 +192,24 @@ struct RSVPView: View {
     private func rsvpHero(geometry: GeometryProxy) -> some View {
         let heroWidth = min(geometry.size.width - 48, 640.0)
 
-        GeometryReader { heroGeo in
-            let wordBoxHeight: CGFloat = 180
-            let spaceAbove = heroGeo.size.height - wordBoxHeight - 20
-            let contextHeight = max(60, spaceAbove * 0.8)
-
-            VStack(spacing: 0) {
-                if engine.showSentenceContext && spaceAbove > 80 {
-                    Spacer(minLength: 0)
-
-                    SentenceContextView(
-                        allBookWords: book.words,
-                        globalWordIndex: engine.currentIndex
-                    )
-                    .frame(maxWidth: heroWidth)
-                    .frame(height: contextHeight)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-
-                    Spacer(minLength: 0)
-                        .frame(maxHeight: 20)
-                } else {
-                    Spacer()
-                }
-
-                WordDisplay(
-                    word: engine.currentWord,
-                    usesChunkLayout: wordDisplayMode == .threeWordChunk
+        VStack(spacing: 0) {
+            if engine.showSentenceContext {
+                SentenceContextView(
+                    allBookWords: book.words,
+                    globalWordIndex: engine.currentIndex
                 )
                 .frame(maxWidth: heroWidth)
-                .contentShape(Rectangle())
-                .onTapGesture { tapToggle() }
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .padding(.bottom, 16)
             }
+
+            WordDisplay(
+                word: engine.currentWord,
+                usesChunkLayout: wordDisplayMode == .threeWordChunk
+            )
+            .frame(maxWidth: heroWidth)
+            .contentShape(Rectangle())
+            .onTapGesture { tapToggle() }
         }
     }
 
