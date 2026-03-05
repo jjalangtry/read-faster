@@ -41,9 +41,12 @@ struct SentenceContextView: View {
                 .scrollDisabled(true)
                 .onAppear {
                     if !built { buildOnce() }
-                    scrollToLine(proxy, animated: false)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        scrollToLine(proxy, animated: false)
+                    }
                 }
                 .onChange(of: globalWordIndex) { _, _ in
+                    if !built { buildOnce() }
                     scrollToLine(proxy, animated: true)
                 }
             }

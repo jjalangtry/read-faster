@@ -167,6 +167,18 @@ struct RSVPView: View {
 
     // MARK: - Background
 
+    private var coverTintColor: Color {
+        #if canImport(UIKit)
+        guard let data = book.coverImage,
+              let img = UIImage(data: data),
+              let avg = img.averageColor
+        else { return Color.accentColor }
+        return Color(avg)
+        #else
+        return Color.accentColor
+        #endif
+    }
+
     private var backgroundGradient: some View {
         ZStack {
             #if os(macOS)
@@ -176,8 +188,8 @@ struct RSVPView: View {
             #endif
             LinearGradient(
                 colors: [
-                    Color.accentColor.opacity(0.06),
-                    Color.accentColor.opacity(0.02),
+                    coverTintColor.opacity(0.08),
+                    coverTintColor.opacity(0.03),
                     .clear
                 ],
                 startPoint: .top,
@@ -186,14 +198,24 @@ struct RSVPView: View {
         }
     }
 
-    // MARK: - RSVP Hero
+    // MARK: - RSVP Hero (card above, context below)
 
     @ViewBuilder
     private func rsvpHero(geometry: GeometryProxy) -> some View {
         let heroWidth = min(geometry.size.width - 48, 640.0)
 
         VStack(spacing: 0) {
+            WordDisplay(
+                word: engine.currentWord,
+                usesChunkLayout: wordDisplayMode == .threeWordChunk
+            )
+            .frame(maxWidth: heroWidth)
+            .contentShape(Rectangle())
+            .onTapGesture { tapToggle() }
+
             if engine.showSentenceContext {
+                Spacer(minLength: 16).frame(maxHeight: 20)
+
                 SentenceContextView(
                     bookContent: book.content,
                     allBookWords: book.words,
@@ -203,16 +225,6 @@ struct RSVPView: View {
                 .frame(maxWidth: heroWidth)
                 .clipShape(RoundedRectangle(cornerRadius: 14))
             }
-
-            Spacer(minLength: 20).frame(maxHeight: 24)
-
-            WordDisplay(
-                word: engine.currentWord,
-                usesChunkLayout: wordDisplayMode == .threeWordChunk
-            )
-            .frame(maxWidth: heroWidth)
-            .contentShape(Rectangle())
-            .onTapGesture { tapToggle() }
         }
     }
 
@@ -616,6 +628,42 @@ extension RSVPView {
             ? WordDisplayMode.singleWord : .threeWordChunk).rawValue
     }
 }
+
+// MARK: - UIImage Average Color
+
+#if canImport(UIKit)
+import UIKit
+
+extension UIImage {
+    var averageColor: UIColor? {
+        guard let input = CIImage(image: self) else { return nil }
+        let extent = input.extent
+        let filter = CIFilter(
+            name: "CIAreaAverage",
+            parameters: [
+                kCIInputImageKey: input,
+                kCIInputExtentKey: CIVector(cgRect: extent)
+            ]
+        )
+        guard let output = filter?.outputImage else { return nil }
+        var bitmap = [UInt8](repeating: 0, count: 4)
+        CIContext().render(
+            output,
+            toBitmap: &bitmap,
+            rowBytes: 4,
+            bounds: CGRect(x: 0, y: 0, width: 1, height: 1),
+            format: .RGBA8,
+            colorSpace: CGColorSpaceCreateDeviceRGB()
+        )
+        return UIColor(
+            red: CGFloat(bitmap[0]) / 255,
+            green: CGFloat(bitmap[1]) / 255,
+            blue: CGFloat(bitmap[2]) / 255,
+            alpha: 1
+        )
+    }
+}
+#endif
 
 #Preview {
     NavigationStack {

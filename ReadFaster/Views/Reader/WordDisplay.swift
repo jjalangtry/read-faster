@@ -48,29 +48,38 @@ struct WordDisplay: View {
     // MARK: - Chunk Mode
 
     @State private var focalLocalX: CGFloat = 0
-    @State private var textNaturalWidth: CGFloat = 1
+    @State private var measuredWidth: CGFloat = 1
 
     private var focalIndex: Int {
-        let chars = Array(word)
-        guard !chars.isEmpty else { return 0 }
-        return chars.count / 2
+        let stripped = word.filter { !$0.isWhitespace }
+        guard !stripped.isEmpty else { return 0 }
+        let mid = stripped.count / 2
+        var nonSpaceCount = 0
+        for (idx, char) in word.enumerated() {
+            if !char.isWhitespace {
+                if nonSpaceCount == mid { return idx }
+                nonSpaceCount += 1
+            }
+        }
+        return word.count / 2
     }
 
     private var chunkView: some View {
         let chars = Array(word)
-        let fidx = focalIndex
-        guard fidx < chars.count else {
+        let fidx = min(focalIndex, max(0, chars.count - 1))
+
+        guard !chars.isEmpty else {
             return AnyView(
-                Text(word)
-                    .font(chunkFont)
-                    .frame(maxWidth: .infinity)
+                Text(word).font(chunkFont).frame(maxWidth: .infinity)
             )
         }
 
-        let before = String(chars[0..<fidx])
+        let before = fidx > 0 ? String(chars[0..<fidx]) : ""
         let focal = String(chars[fidx])
-        let after = fidx + 1 < chars.count ? String(chars[(fidx + 1)...]) : ""
-        let shift = textNaturalWidth / 2 - focalLocalX
+        let after = fidx + 1 < chars.count
+            ? String(chars[(fidx + 1)...]) : ""
+        let shift = measuredWidth > 0
+            ? measuredWidth / 2 - focalLocalX : 0
 
         return AnyView(
             GeometryReader { container in
@@ -83,7 +92,6 @@ struct WordDisplay: View {
                 .font(chunkFont)
                 .lineLimit(1)
                 .minimumScaleFactor(0.35)
-                .fixedSize()
                 .coordinateSpace(name: "phrase")
                 .background(widthMeasure)
                 .offset(x: shift)
@@ -115,9 +123,9 @@ struct WordDisplay: View {
     private var widthMeasure: some View {
         GeometryReader { geo in
             Color.clear
-                .onAppear { textNaturalWidth = geo.size.width }
+                .onAppear { measuredWidth = geo.size.width }
                 .onChange(of: word) { _, _ in
-                    textNaturalWidth = geo.size.width
+                    measuredWidth = geo.size.width
                 }
         }
     }
@@ -128,6 +136,7 @@ struct WordDisplay: View {
         WordDisplay(word: "recognition")
         WordDisplay(word: "the quick brown", usesChunkLayout: true)
         WordDisplay(word: "Although there was", usesChunkLayout: true)
+        WordDisplay(word: "1", usesChunkLayout: true)
     }
     .padding()
 }
