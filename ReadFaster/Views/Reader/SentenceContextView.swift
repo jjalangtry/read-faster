@@ -5,25 +5,23 @@ struct SentenceContextView: View {
     let globalWordIndex: Int
     var highlightCount: Int = 1
 
-    private let contextWindow = 150
+    private let contextWindow = 300
 
-    private var displayRange: Range<Int> {
-        let start = max(0, globalWordIndex - contextWindow)
-        let end = min(allBookWords.count, globalWordIndex + contextWindow)
-        return start..<end
+    private var windowStart: Int {
+        max(0, globalWordIndex - contextWindow)
     }
 
-    private var localIndex: Int {
-        globalWordIndex - displayRange.lowerBound
+    private var windowEnd: Int {
+        min(allBookWords.count, globalWordIndex + contextWindow)
     }
 
-    private var highlightedIndices: Set<Int> {
-        let count = min(highlightCount, displayRange.count - localIndex)
-        return Set(localIndex..<(localIndex + count))
+    private var highlightedGlobalIndices: Set<Int> {
+        let end = min(globalWordIndex + highlightCount, allBookWords.count)
+        return Set(globalWordIndex..<end)
     }
 
     @State private var frames: [Int: CGRect] = [:]
-    @State private var lastScrolledLine: CGFloat = 0
+    @State private var lastScrollLine: CGFloat = -1
 
     var body: some View {
         if allBookWords.isEmpty {
@@ -40,53 +38,51 @@ struct SentenceContextView: View {
                         frames = val
                     }
                     .padding(.horizontal, 20)
-                    .padding(.vertical, 30)
+                    .padding(.vertical, 40)
                 }
                 .scrollDisabled(true)
                 .onChange(of: globalWordIndex) { _, _ in
-                    scrollIfNeeded(proxy)
+                    scrollOnLineChange(proxy)
                 }
                 .onAppear {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                        proxy.scrollTo(localIndex, anchor: .center)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        proxy.scrollTo(globalWordIndex, anchor: .center)
                     }
                 }
             }
         }
     }
 
-    private func scrollIfNeeded(_ proxy: ScrollViewProxy) {
-        guard let frame = frames[localIndex] else { return }
+    private func scrollOnLineChange(_ proxy: ScrollViewProxy) {
+        guard let frame = frames[globalWordIndex] else {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                proxy.scrollTo(globalWordIndex, anchor: .center)
+            }
+            return
+        }
         let lineY = frame.minY
-        if lineY != lastScrolledLine {
-            lastScrolledLine = lineY
-            withAnimation(.easeInOut(duration: 0.35)) {
-                proxy.scrollTo(localIndex, anchor: .center)
+        if abs(lineY - lastScrollLine) > 1 {
+            lastScrollLine = lineY
+            withAnimation(.easeInOut(duration: 0.4)) {
+                proxy.scrollTo(globalWordIndex, anchor: .center)
             }
         }
     }
 
     private var textFlow: some View {
         ContextFlowLayout(spacing: 5, lineSpacing: 10) {
-            ForEach(
-                Array(allBookWords[displayRange].enumerated()),
-                id: \.offset
-            ) { index, word in
-                Text(word)
-                    .id(index)
+            ForEach(windowStart..<windowEnd, id: \.self) { globalIdx in
+                Text(allBookWords[globalIdx])
+                    .id(globalIdx)
                     .font(AppFont.contextWord(highlighted: false))
-                    .foregroundColor(
-                        highlightedIndices.contains(index)
-                            ? Color.primary
-                            : index < localIndex
-                                ? Color.primary.opacity(0.5)
-                                : Color.primary.opacity(0.35)
-                    )
+                    .foregroundColor(wordColor(for: globalIdx))
                     .background(
                         GeometryReader { geo in
                             Color.clear.preference(
                                 key: WordFramePreference.self,
-                                value: [index: geo.frame(in: .named("ctx"))]
+                                value: [globalIdx: geo.frame(
+                                    in: .named("ctx")
+                                )]
                             )
                         }
                     )
@@ -94,16 +90,29 @@ struct SentenceContextView: View {
         }
     }
 
+    private func wordColor(for globalIdx: Int) -> Color {
+        if highlightedGlobalIndices.contains(globalIdx) {
+            return Color.primary
+        }
+        if globalIdx < globalWordIndex {
+            return Color.primary.opacity(0.5)
+        }
+        return Color.primary.opacity(0.35)
+    }
+
     @ViewBuilder
     private var underlines: some View {
-        ForEach(Array(highlightedIndices.sorted()), id: \.self) { idx in
-            if let frame = frames[idx] {
+        ForEach(
+            Array(highlightedGlobalIndices.sorted()), id: \.self
+        ) { globalIdx in
+            if let frame = frames[globalIdx] {
                 Capsule()
                     .fill(Color.accentColor)
                     .frame(width: frame.width, height: 2)
                     .offset(x: frame.minX, y: frame.maxY + 1)
                     .animation(
-                        .easeInOut(duration: 0.2), value: globalWordIndex
+                        .easeInOut(duration: 0.15),
+                        value: globalWordIndex
                     )
             }
         }
@@ -121,7 +130,7 @@ struct WordFramePreference: PreferenceKey {
     }
 }
 
-// MARK: - Left-aligned flow layout (no centering — like source text)
+// MARK: - Left-aligned flow layout
 
 struct ContextFlowLayout: Layout {
     var spacing: CGFloat = 5
@@ -130,14 +139,14 @@ struct ContextFlowLayout: Layout {
     func sizeThatFits(
         proposal: ProposedViewSize, subviews: Subviews, cache: inout ()
     ) -> CGSize {
-        layout(proposal: proposal, subviews: subviews).size
+        computeLayout(proposal: proposal, subviews: subviews).size
     }
 
     func placeSubviews(
         in bounds: CGRect, proposal: ProposedViewSize,
         subviews: Subviews, cache: inout ()
     ) {
-        let result = layout(proposal: proposal, subviews: subviews)
+        let result = computeLayout(proposal: proposal, subviews: subviews)
         for (idx, pos) in result.positions.enumerated() {
             subviews[idx].place(
                 at: CGPoint(x: bounds.minX + pos.x, y: bounds.minY + pos.y),
@@ -146,7 +155,7 @@ struct ContextFlowLayout: Layout {
         }
     }
 
-    private func layout(
+    private func computeLayout(
         proposal: ProposedViewSize, subviews: Subviews
     ) -> LayoutResult {
         let maxW = proposal.width ?? .infinity

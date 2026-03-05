@@ -51,58 +51,38 @@ struct WordDisplay: View {
         .minimumScaleFactor(0.5)
     }
 
-    // MARK: - Chunk Mode (uniform scale, offset to center focal)
-
-    @State private var focalOffset: CGFloat = 0
+    // MARK: - Chunk Mode
+    // HStack centering: leading gets maxWidth right-aligned,
+    // trailing gets maxWidth left-aligned. The focal character
+    // sits exactly at the geometric center regardless of text length.
+    // Both sides use the same font; minimumScaleFactor may differ
+    // slightly per side but the red letter position is always exact.
 
     private var chunkView: some View {
         let parts = chunkDisplayParts
-        let chunkFont = AppFont.rsvpPhrase(size: max(30, fontSize * 0.72))
+        let chunkFont = AppFont.rsvpPhrase(size: max(28, fontSize * 0.65))
 
-        return GeometryReader { containerGeo in
-            let center = containerGeo.size.width / 2
-
-            HStack(spacing: 0) {
+        return HStack(spacing: 0) {
+            if let focal = parts.anchor.focal {
                 Text(parts.leadingText)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
+                    .frame(minWidth: 0, maxWidth: .infinity, alignment: .trailing)
 
-                if let focal = parts.anchor.focal {
-                    Text(String(focal))
-                        .foregroundColor(.red)
-                        .background(
-                            GeometryReader { focalGeo in
-                                Color.clear.onAppear {
-                                    updateOffset(focalGeo, center: center)
-                                }
-                                .onChange(of: word) { _, _ in
-                                    DispatchQueue.main.async {
-                                        updateOffset(focalGeo, center: center)
-                                    }
-                                }
-                            }
-                        )
-                }
+                Text(String(focal))
+                    .foregroundStyle(.red)
 
                 Text(parts.trailingText)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
+                    .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+            } else {
+                Text(parts.before + parts.anchor.fullWord + parts.after)
+                    .foregroundStyle(.primary)
+                    .frame(maxWidth: .infinity)
             }
-            .font(chunkFont)
-            .lineLimit(1)
-            .minimumScaleFactor(0.35)
-            .fixedSize()
-            .offset(x: focalOffset)
-            .frame(
-                width: containerGeo.size.width,
-                height: containerGeo.size.height,
-                alignment: .center
-            )
-            .coordinateSpace(name: "chunkContainer")
         }
-    }
-
-    private func updateOffset(_ geo: GeometryProxy, center: CGFloat) {
-        let mid = geo.frame(in: .named("chunkContainer")).midX
-        focalOffset = center - mid
+        .font(chunkFont)
+        .lineLimit(1)
+        .minimumScaleFactor(0.4)
     }
 
     private var chunkDisplayParts: ChunkDisplayParts {
