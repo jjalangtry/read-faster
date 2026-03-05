@@ -14,6 +14,8 @@ struct RSVPView: View {
     @State private var hideControlsTask: Task<Void, Never>?
     @State private var scrubbing = false
     @State private var scrubValue: Double = 0
+    @State private var chapterPositions: [UUID: Int] = [:]
+    @State private var lastChapterID: UUID?
 
     @AppStorage("defaultWPM") private var defaultWPM: Int = 300
     @AppStorage("pauseOnPunctuation") private var pauseOnPunctuation: Bool = true
@@ -55,6 +57,7 @@ struct RSVPView: View {
         .onAppear {
             migrateLegacyWordDisplayModeIfNeeded()
             setupEngine()
+            lastChapterID = currentChapter?.id
         }
         .onChange(of: wordDisplayModeRaw) { _, rawValue in
             let mode = WordDisplayMode(rawValue: rawValue) ?? .singleWord
@@ -71,6 +74,9 @@ struct RSVPView: View {
         }
         .onChange(of: engine.isPlaying) { _, playing in
             scheduleAutoHide(playing: playing)
+        }
+        .onChange(of: engine.currentIndex) { _, _ in
+            trackChapterChange()
         }
         .onDisappear { engine.pause() }
         #if os(macOS)
@@ -137,10 +143,17 @@ struct RSVPView: View {
         .padding(.horizontal, 20)
     }
 
-    // MARK: - Toolbar
+    // MARK: - Toolbar (mode toggles + … menu)
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
+        ToolbarItemGroup(placement: .principal) {
+            DisplayModeBar(
+                wordDisplayModeRaw: $wordDisplayModeRaw,
+                showContext: $engine.showSentenceContext
+            )
+        }
+
         ToolbarItem(placement: .primaryAction) {
             Menu {
                 Button { showingBookmarks = true } label: {
@@ -180,25 +193,28 @@ struct RSVPView: View {
         }
     }
 
-    // MARK: - RSVP Hero
+    // MARK: - RSVP Hero (sentence context + word display, pinned layout)
 
     @ViewBuilder
     private func rsvpHero(geometry: GeometryProxy) -> some View {
-        VStack(spacing: 14) {
+        let heroWidth = min(geometry.size.width - 48, 640.0)
+
+        VStack(spacing: 0) {
             if engine.showSentenceContext
                 && !engine.currentSentenceWords.isEmpty {
                 SentenceContextView(
                     words: engine.currentSentenceWords,
                     currentWordIndex: engine.currentWordIndexInSentence
                 )
-                .frame(maxWidth: min(geometry.size.width * 0.92, 600))
+                .frame(maxWidth: heroWidth)
+                .padding(.bottom, 14)
             }
 
             WordDisplay(
                 word: engine.currentWord,
                 usesChunkLayout: wordDisplayMode == .threeWordChunk
             )
-            .frame(maxWidth: min(geometry.size.width - 48, 640))
+            .frame(maxWidth: heroWidth)
             .contentShape(Rectangle())
             .onTapGesture { tapToggle() }
         }
@@ -232,13 +248,6 @@ struct RSVPView: View {
             WPMControl(wpm: $engine.wordsPerMinute)
                 .frame(maxWidth: maxW)
                 .opacity(controlsOpacity)
-                .padding(.bottom, 12)
-
-            DisplayModeBar(
-                wordDisplayModeRaw: $wordDisplayModeRaw,
-                showContext: $engine.showSentenceContext
-            )
-            .opacity(controlsOpacity)
         }
     }
 
@@ -267,13 +276,13 @@ struct RSVPView: View {
         }
     }
 
-    // MARK: - Chapter Button (circular, same size as … toolbar button)
+    // MARK: - Chapter Button (glass circle, same as … button)
 
     private var chapterButton: some View {
         Menu {
             ForEach(book.chapters.flattened) { chapter in
                 Button {
-                    engine.seek(to: chapter.startWordIndex)
+                    selectChapter(chapter)
                 } label: {
                     HStack {
                         Text(chapter.title)
@@ -284,7 +293,10 @@ struct RSVPView: View {
             }
         } label: {
             Image(systemName: "list.bullet")
+                .frame(width: 34, height: 34)
+                .contentShape(Circle())
         }
+        .buttonStyle(.glass)
         #if os(iOS)
         .sensoryFeedback(.selection, trigger: currentChapter?.id)
         #endif
@@ -452,7 +464,32 @@ extension RSVPView {
     func seekToChapterRelative(_ progress: Double) {
         let length = chapterEndIndex - chapterStartIndex
         let target = chapterStartIndex + Int(progress * Double(length))
-        engine.seek(to: min(max(target, chapterStartIndex), chapterEndIndex - 1))
+        engine.seek(
+            to: min(max(target, chapterStartIndex), chapterEndIndex - 1)
+        )
+    }
+
+    func selectChapter(_ chapter: Chapter) {
+        if let curID = currentChapter?.id {
+            chapterPositions[curID] = engine.currentIndex
+        }
+        if let saved = chapterPositions[chapter.id] {
+            engine.seek(to: saved)
+        } else {
+            engine.seek(to: chapter.startWordIndex)
+        }
+        lastChapterID = chapter.id
+    }
+
+    func trackChapterChange() {
+        guard let curID = currentChapter?.id else { return }
+        if curID != lastChapterID {
+            if let oldID = lastChapterID {
+                chapterPositions[oldID] = engine.currentIndex
+            }
+            lastChapterID = curID
+        }
+        chapterPositions[curID] = engine.currentIndex
     }
 
     func chapterProgress(_ chapter: Chapter) -> String {
@@ -465,8 +502,17 @@ extension RSVPView {
             ? flat[idx + 1].startWordIndex
             : engine.totalWords
         let length = max(1, end - start)
-        let read = max(0, min(engine.currentIndex - start, length))
-        return "\(max(0, min(100, Int(Double(read) / Double(length) * 100))))%"
+
+        let posInChapter: Int
+        if let saved = chapterPositions[chapter.id] {
+            posInChapter = max(0, min(saved - start, length))
+        } else if let cur = currentChapter, cur.id == chapter.id {
+            posInChapter = max(0, min(engine.currentIndex - start, length))
+        } else {
+            return "0%"
+        }
+        let pct = Int(Double(posInChapter) / Double(length) * 100)
+        return "\(max(0, min(100, pct)))%"
     }
 }
 
@@ -477,7 +523,9 @@ extension RSVPView {
         if book.hasChapters {
             let length = max(1, chapterEndIndex - chapterStartIndex)
             let pos = max(0, engine.currentIndex - chapterStartIndex)
-            let pct = min(100, max(0, Int(chapterRelativeProgress * 100)))
+            let pct = min(
+                100, max(0, Int(chapterRelativeProgress * 100))
+            )
             return "\(min(pos + 1, length)) / \(length) · \(pct)%"
         }
         let total = engine.totalWords
@@ -494,7 +542,8 @@ extension RSVPView {
         } else {
             left = max(
                 0,
-                engine.totalWords - (engine.currentIndex + engine.currentDisplayWordCount)
+                engine.totalWords
+                    - (engine.currentIndex + engine.currentDisplayWordCount)
             )
         }
         guard left > 0, engine.wordsPerMinute > 0 else { return nil }
@@ -536,7 +585,8 @@ extension RSVPView {
     func migrateLegacyWordDisplayModeIfNeeded() {
         let defaults = UserDefaults.standard
         guard defaults.object(forKey: "readerWordDisplayMode") == nil,
-              defaults.object(forKey: "wordsPerChunk") != nil else { return }
+              defaults.object(forKey: "wordsPerChunk") != nil
+        else { return }
         let legacy = defaults.integer(forKey: "wordsPerChunk")
         wordDisplayModeRaw = (legacy >= 3
             ? WordDisplayMode.threeWordChunk : .singleWord).rawValue
@@ -563,8 +613,6 @@ extension RSVPView {
     }
 }
 
-// MARK: - Preview
-
 #Preview {
     NavigationStack {
         RSVPView(book: Book(
@@ -572,8 +620,8 @@ extension RSVPView {
             author: "Author",
             fileName: "sample.txt",
             fileType: .txt,
-            content: "This is a sample book with some content for RSVP.",
-            totalWords: 10
+            content: "This is a sample book with content for RSVP.",
+            totalWords: 9
         ))
     }
     .modelContainer(

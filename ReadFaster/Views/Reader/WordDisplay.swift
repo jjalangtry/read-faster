@@ -25,9 +25,6 @@ struct WordDisplay: View {
         .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 28))
         .accessibilityElement()
         .accessibilityLabel(word)
-        .accessibilityHint(usesChunkLayout
-                           ? "Current phrase in chunk reading mode"
-                           : "Current word in RSVP reader")
         .onChange(of: word) { _, _ in
             animate = false
             withAnimation(.easeOut(duration: 0.06)) { animate = true }
@@ -56,25 +53,33 @@ struct WordDisplay: View {
         .minimumScaleFactor(0.5)
     }
 
-    // MARK: - Chunk Mode (single attributed text to prevent split scaling)
+    // MARK: - Chunk Mode (HStack centering, no independent scaling)
 
     private var chunkView: some View {
-        chunkAttributedText
-            .font(AppFont.rsvpPhrase(size: max(30, fontSize * 0.72)))
-            .lineLimit(1)
-            .minimumScaleFactor(0.5)
-            .frame(maxWidth: .infinity, minHeight: 72)
-    }
-
-    private var chunkAttributedText: Text {
         let parts = chunkDisplayParts
-        guard let focal = parts.anchor.focal else {
-            return Text(parts.before + parts.anchor.fullWord + parts.after)
-                .foregroundColor(.primary)
+        let chunkFont = AppFont.rsvpPhrase(size: max(30, fontSize * 0.72))
+
+        return HStack(spacing: 0) {
+            if let focal = parts.anchor.focal {
+                Text(parts.leadingText)
+                    .foregroundStyle(.primary)
+                    .frame(minWidth: 0, maxWidth: .infinity, alignment: .trailing)
+
+                Text(String(focal))
+                    .foregroundStyle(.red)
+
+                Text(parts.trailingText)
+                    .foregroundStyle(.primary)
+                    .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+            } else {
+                Text(parts.before + parts.anchor.fullWord + parts.after)
+                    .foregroundStyle(.primary)
+                    .frame(maxWidth: .infinity)
+            }
         }
-        return Text(parts.leadingText).foregroundColor(.primary)
-            + Text(String(focal)).foregroundColor(.red)
-            + Text(parts.trailingText).foregroundColor(.primary)
+        .font(chunkFont)
+        .lineLimit(1)
+        .frame(maxWidth: .infinity, minHeight: 72)
     }
 
     private var chunkDisplayParts: ChunkDisplayParts {
