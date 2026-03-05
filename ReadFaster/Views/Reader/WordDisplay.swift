@@ -20,11 +20,12 @@ struct WordDisplay: View {
         .padding(.horizontal, 28)
         .padding(.vertical, 44)
         .frame(height: boxHeight)
-        .clipped()
         .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 28))
         .accessibilityElement()
         .accessibilityLabel(word)
     }
+
+    // MARK: - Single Word
 
     private var singleWordView: some View {
         HStack(spacing: 0) {
@@ -44,42 +45,81 @@ struct WordDisplay: View {
         .minimumScaleFactor(0.5)
     }
 
-    private var chunkView: some View {
-        chunkText
-            .font(AppFont.rsvpPhrase(size: max(28, fontSize * 0.65)))
-            .lineLimit(1)
-            .minimumScaleFactor(0.35)
-            .frame(maxWidth: .infinity, alignment: .center)
+    // MARK: - Chunk Mode
+
+    @State private var focalLocalX: CGFloat = 0
+    @State private var textNaturalWidth: CGFloat = 1
+
+    private var focalIndex: Int {
+        let chars = Array(word)
+        guard !chars.isEmpty else { return 0 }
+        return chars.count / 2
     }
 
-    private var chunkText: Text {
-        let full = word
-        let words = full.split(whereSeparator: \.isWhitespace).map(String.init)
-        guard !words.isEmpty else {
-            return Text(full)
+    private var chunkView: some View {
+        let chars = Array(word)
+        let fidx = focalIndex
+        guard fidx < chars.count else {
+            return AnyView(
+                Text(word)
+                    .font(chunkFont)
+                    .frame(maxWidth: .infinity)
+            )
         }
 
-        let anchorIdx = words.count >= 2 ? 1 : 0
-        let anchorWord = words[anchorIdx]
-        let orpPos = ORPCalculator.calculate(for: anchorWord)
+        let before = String(chars[0..<fidx])
+        let focal = String(chars[fidx])
+        let after = fidx + 1 < chars.count ? String(chars[(fidx + 1)...]) : ""
+        let shift = textNaturalWidth / 2 - focalLocalX
 
-        var charIndex = 0
-        for idx in 0..<anchorIdx {
-            charIndex += words[idx].count + 1
+        return AnyView(
+            GeometryReader { container in
+                HStack(spacing: 0) {
+                    Text(before).foregroundColor(.primary)
+                    Text(focal).foregroundColor(.red)
+                        .background(focalMeasure)
+                    Text(after).foregroundColor(.primary)
+                }
+                .font(chunkFont)
+                .lineLimit(1)
+                .minimumScaleFactor(0.35)
+                .fixedSize()
+                .coordinateSpace(name: "phrase")
+                .background(widthMeasure)
+                .offset(x: shift)
+                .frame(
+                    width: container.size.width,
+                    height: container.size.height,
+                    alignment: .center
+                )
+            }
+        )
+    }
+
+    private var chunkFont: Font {
+        AppFont.rsvpPhrase(size: max(28, fontSize * 0.65))
+    }
+
+    private var focalMeasure: some View {
+        GeometryReader { geo in
+            Color.clear
+                .onAppear {
+                    focalLocalX = geo.frame(in: .named("phrase")).midX
+                }
+                .onChange(of: word) { _, _ in
+                    focalLocalX = geo.frame(in: .named("phrase")).midX
+                }
         }
-        charIndex += orpPos
-        let focalIndex = charIndex
+    }
 
-        let chars = Array(full)
-        guard focalIndex < chars.count else {
-            return Text(full)
+    private var widthMeasure: some View {
+        GeometryReader { geo in
+            Color.clear
+                .onAppear { textNaturalWidth = geo.size.width }
+                .onChange(of: word) { _, _ in
+                    textNaturalWidth = geo.size.width
+                }
         }
-
-        let before = String(chars[0..<focalIndex])
-        let focal = String(chars[focalIndex])
-        let after = String(chars[(focalIndex + 1)...])
-
-        return Text("\(Text(before).foregroundColor(.primary))\(Text(focal).foregroundColor(.red))\(Text(after).foregroundColor(.primary))")
     }
 }
 
@@ -87,6 +127,7 @@ struct WordDisplay: View {
     VStack(spacing: 20) {
         WordDisplay(word: "recognition")
         WordDisplay(word: "the quick brown", usesChunkLayout: true)
+        WordDisplay(word: "Although there was", usesChunkLayout: true)
     }
     .padding()
 }
