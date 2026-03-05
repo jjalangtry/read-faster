@@ -195,6 +195,7 @@ struct RSVPView: View {
         VStack(spacing: 0) {
             if engine.showSentenceContext {
                 SentenceContextView(
+                    bookContent: book.content,
                     allBookWords: book.words,
                     globalWordIndex: engine.currentIndex,
                     highlightCount: engine.currentDisplayWordCount

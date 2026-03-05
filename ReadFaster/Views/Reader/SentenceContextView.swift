@@ -1,27 +1,21 @@
 import SwiftUI
 
 struct SentenceContextView: View {
+    let bookContent: String
     let allBookWords: [String]
     let globalWordIndex: Int
     var highlightCount: Int = 1
 
-    private let contextWindow = 300
+    @State private var wordToLine: [Int: Int] = [:]
+    @State private var lastLine: Int = -1
 
-    private var windowStart: Int {
-        max(0, globalWordIndex - contextWindow)
+    private var highlightEnd: Int {
+        min(globalWordIndex + highlightCount, allBookWords.count)
     }
 
-    private var windowEnd: Int {
-        min(allBookWords.count, globalWordIndex + contextWindow)
+    private var lines: [String] {
+        bookContent.components(separatedBy: .newlines)
     }
-
-    private var highlightedGlobalIndices: Set<Int> {
-        let end = min(globalWordIndex + highlightCount, allBookWords.count)
-        return Set(globalWordIndex..<end)
-    }
-
-    @State private var frames: [Int: CGRect] = [:]
-    @State private var lastScrollLine: CGFloat = -1
 
     var body: some View {
         if allBookWords.isEmpty {
@@ -29,164 +23,163 @@ struct SentenceContextView: View {
         } else {
             ScrollViewReader { proxy in
                 ScrollView(.vertical, showsIndicators: false) {
-                    ZStack(alignment: .topLeading) {
-                        textFlow
-                        underlines
-                    }
-                    .coordinateSpace(name: "ctx")
-                    .onPreferenceChange(WordFramePreference.self) { val in
-                        frames = val
+                    LazyVStack(alignment: .leading, spacing: 4) {
+                        ForEach(
+                            Array(lines.enumerated()), id: \.offset
+                        ) { lineIdx, line in
+                            if line.trimmingCharacters(
+                                in: .whitespaces
+                            ).isEmpty {
+                                Spacer().frame(height: 12).id(lineIdx)
+                            } else {
+                                lineView(line, lineIndex: lineIdx)
+                                    .id(lineIdx)
+                            }
+                        }
                     }
                     .padding(.horizontal, 20)
-                    .padding(.vertical, 40)
+                    .padding(.vertical, 80)
                 }
                 .scrollDisabled(true)
+                .onAppear { buildIndex(); scrollToCurrentLine(proxy) }
                 .onChange(of: globalWordIndex) { _, _ in
-                    scrollOnLineChange(proxy)
-                }
-                .onAppear {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        proxy.scrollTo(globalWordIndex, anchor: .center)
-                    }
+                    scrollToCurrentLine(proxy)
                 }
             }
         }
     }
 
-    private func scrollOnLineChange(_ proxy: ScrollViewProxy) {
-        guard let frame = frames[globalWordIndex] else {
-            withAnimation(.easeInOut(duration: 0.3)) {
-                proxy.scrollTo(globalWordIndex, anchor: .center)
-            }
-            return
-        }
-        let lineY = frame.minY
-        if abs(lineY - lastScrollLine) > 1 {
-            lastScrollLine = lineY
+    private func scrollToCurrentLine(_ proxy: ScrollViewProxy) {
+        let line = findCurrentLine()
+        if line != lastLine {
+            lastLine = line
             withAnimation(.easeInOut(duration: 0.4)) {
-                proxy.scrollTo(globalWordIndex, anchor: .center)
+                proxy.scrollTo(line, anchor: .center)
             }
         }
     }
 
-    private var textFlow: some View {
-        ContextFlowLayout(spacing: 5, lineSpacing: 10) {
-            ForEach(windowStart..<windowEnd, id: \.self) { globalIdx in
-                Text(allBookWords[globalIdx])
-                    .id(globalIdx)
-                    .font(AppFont.contextWord(highlighted: false))
-                    .foregroundColor(wordColor(for: globalIdx))
-                    .background(
-                        GeometryReader { geo in
-                            Color.clear.preference(
-                                key: WordFramePreference.self,
-                                value: [globalIdx: geo.frame(
-                                    in: .named("ctx")
-                                )]
-                            )
-                        }
-                    )
+    private func findCurrentLine() -> Int {
+        if let cached = wordToLine[globalWordIndex] { return cached }
+        var wordCount = 0
+        for (lineIdx, line) in lines.enumerated() {
+            let wordsInLine = line.split(whereSeparator: {
+                $0.isWhitespace || $0.isNewline
+            }).count
+            if globalWordIndex < wordCount + wordsInLine {
+                wordToLine[globalWordIndex] = lineIdx
+                return lineIdx
             }
+            wordCount += wordsInLine
         }
+        return max(0, lines.count - 1)
     }
 
-    private func wordColor(for globalIdx: Int) -> Color {
-        if highlightedGlobalIndices.contains(globalIdx) {
-            return Color.primary
+    private func buildIndex() {
+        var wordCount = 0
+        for (lineIdx, line) in lines.enumerated() {
+            let wordsInLine = line.split(whereSeparator: {
+                $0.isWhitespace || $0.isNewline
+            }).count
+            for wIdx in wordCount..<(wordCount + wordsInLine) {
+                wordToLine[wIdx] = lineIdx
+            }
+            wordCount += wordsInLine
         }
-        if globalIdx < globalWordIndex {
-            return Color.primary.opacity(0.5)
-        }
-        return Color.primary.opacity(0.35)
     }
 
     @ViewBuilder
-    private var underlines: some View {
-        ForEach(
-            Array(highlightedGlobalIndices.sorted()), id: \.self
-        ) { globalIdx in
-            if let frame = frames[globalIdx] {
-                Capsule()
-                    .fill(Color.accentColor)
-                    .frame(width: frame.width, height: 2)
-                    .offset(x: frame.minX, y: frame.maxY + 1)
-                    .animation(
-                        .easeInOut(duration: 0.15),
-                        value: globalWordIndex
-                    )
-            }
+    private func lineView(_ line: String, lineIndex: Int) -> some View {
+        let lineWords = line.split(whereSeparator: {
+            $0.isWhitespace
+        }).map(String.init)
+
+        let lineGlobalStart = globalStartForLine(lineIndex)
+        let lineGlobalEnd = lineGlobalStart + lineWords.count
+
+        let hasHighlight = globalWordIndex < lineGlobalEnd
+            && highlightEnd > lineGlobalStart
+
+        if hasHighlight {
+            highlightedLineText(
+                line: line, lineWords: lineWords,
+                lineStart: lineGlobalStart
+            )
+        } else if lineGlobalEnd <= globalWordIndex {
+            Text(line)
+                .font(AppFont.contextWord(highlighted: false))
+                .foregroundColor(Color.primary.opacity(0.5))
+        } else {
+            Text(line)
+                .font(AppFont.contextWord(highlighted: false))
+                .foregroundColor(Color.primary.opacity(0.35))
         }
     }
-}
 
-// MARK: - Preference Key
+    private func highlightedLineText(
+        line: String, lineWords: [String], lineStart: Int
+    ) -> some View {
+        var parts: [Text] = []
+        var searchFrom = line.startIndex
 
-struct WordFramePreference: PreferenceKey {
-    static var defaultValue: [Int: CGRect] = [:]
-    static func reduce(
-        value: inout [Int: CGRect], nextValue: () -> [Int: CGRect]
-    ) {
-        value.merge(nextValue()) { $1 }
-    }
-}
+        for (localIdx, word) in lineWords.enumerated() {
+            let gIdx = lineStart + localIdx
 
-// MARK: - Left-aligned flow layout
+            guard let range = line.range(
+                of: word,
+                range: searchFrom..<line.endIndex
+            ) else { continue }
 
-struct ContextFlowLayout: Layout {
-    var spacing: CGFloat = 5
-    var lineSpacing: CGFloat = 10
+            if searchFrom < range.lowerBound {
+                let gap = String(line[searchFrom..<range.lowerBound])
+                let opacity: Double = gIdx <= globalWordIndex ? 0.5 : 0.35
+                parts.append(
+                    Text(gap).foregroundColor(
+                        Color.primary.opacity(opacity)
+                    )
+                )
+            }
 
-    func sizeThatFits(
-        proposal: ProposedViewSize, subviews: Subviews, cache: inout ()
-    ) -> CGSize {
-        computeLayout(proposal: proposal, subviews: subviews).size
-    }
+            let isHL = gIdx >= globalWordIndex && gIdx < highlightEnd
 
-    func placeSubviews(
-        in bounds: CGRect, proposal: ProposedViewSize,
-        subviews: Subviews, cache: inout ()
-    ) {
-        let result = computeLayout(proposal: proposal, subviews: subviews)
-        for (idx, pos) in result.positions.enumerated() {
-            subviews[idx].place(
-                at: CGPoint(x: bounds.minX + pos.x, y: bounds.minY + pos.y),
-                proposal: ProposedViewSize(result.sizes[idx])
+            if isHL {
+                parts.append(
+                    Text(word)
+                        .foregroundColor(Color.primary)
+                        .underline(true, color: Color.accentColor)
+                )
+            } else if gIdx < globalWordIndex {
+                parts.append(
+                    Text(word).foregroundColor(Color.primary.opacity(0.5))
+                )
+            } else {
+                parts.append(
+                    Text(word).foregroundColor(Color.primary.opacity(0.35))
+                )
+            }
+
+            searchFrom = range.upperBound
+        }
+
+        if searchFrom < line.endIndex {
+            parts.append(
+                Text(String(line[searchFrom...]))
+                    .foregroundColor(Color.primary.opacity(0.35))
             )
         }
+
+        let combined = parts.reduce(Text(""), +)
+        return combined
+            .font(AppFont.contextWord(highlighted: false))
     }
 
-    private func computeLayout(
-        proposal: ProposedViewSize, subviews: Subviews
-    ) -> LayoutResult {
-        let maxW = proposal.width ?? .infinity
-        var positions: [CGPoint] = []
-        var sizes: [CGSize] = []
-        var curX: CGFloat = 0
-        var curY: CGFloat = 0
-        var lineH: CGFloat = 0
-
-        for sub in subviews {
-            let size = sub.sizeThatFits(.unspecified)
-            sizes.append(size)
-            if curX + size.width > maxW && curX > 0 {
-                curX = 0
-                curY += lineH + lineSpacing
-                lineH = 0
-            }
-            positions.append(CGPoint(x: curX, y: curY))
-            curX += size.width + spacing
-            lineH = max(lineH, size.height)
+    private func globalStartForLine(_ lineIndex: Int) -> Int {
+        var count = 0
+        for idx in 0..<lineIndex {
+            count += lines[idx].split(whereSeparator: {
+                $0.isWhitespace || $0.isNewline
+            }).count
         }
-
-        return LayoutResult(
-            size: CGSize(width: maxW, height: curY + lineH),
-            positions: positions, sizes: sizes
-        )
-    }
-
-    private struct LayoutResult {
-        let size: CGSize
-        let positions: [CGPoint]
-        let sizes: [CGSize]
+        return count
     }
 }
