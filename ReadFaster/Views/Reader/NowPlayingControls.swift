@@ -260,7 +260,7 @@ struct WPMControl: View {
     }
 }
 
-// MARK: - Display Mode Bar (icon-only for toolbar)
+// MARK: - Display Mode Bar (labeled chips, bottom placement)
 
 struct DisplayModeBar: View {
     @Binding var wordDisplayModeRaw: String
@@ -271,23 +271,26 @@ struct DisplayModeBar: View {
     }
 
     var body: some View {
-        HStack(spacing: 2) {
-            iconToggle(
-                icon: "1.circle",
+        HStack(spacing: 6) {
+            chip(
+                label: "1 Word", icon: "text.word.spacing",
                 active: wordMode == .singleWord
             ) {
                 wordDisplayModeRaw = WordDisplayMode.singleWord.rawValue
             }
 
-            iconToggle(
-                icon: "3.circle",
+            chip(
+                label: "3 Words",
+                icon: "text.line.first.and.arrowtriangle.forward",
                 active: wordMode == .threeWordChunk
             ) {
                 wordDisplayModeRaw = WordDisplayMode.threeWordChunk.rawValue
             }
 
-            iconToggle(
-                icon: "text.alignleft",
+            Divider().frame(height: 20).opacity(0.3)
+
+            chip(
+                label: "Context", icon: "text.alignleft",
                 active: showContext
             ) {
                 withAnimation(.easeInOut(duration: 0.2)) {
@@ -295,6 +298,9 @@ struct DisplayModeBar: View {
                 }
             }
         }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 4)
+        .glassEffect(.regular, in: .capsule)
         #if os(iOS)
         .sensoryFeedback(.selection, trigger: wordDisplayModeRaw)
         .sensoryFeedback(.selection, trigger: showContext)
@@ -302,17 +308,25 @@ struct DisplayModeBar: View {
     }
 
     @ViewBuilder
-    private func iconToggle(
-        icon: String,
-        active: Bool,
+    private func chip(
+        label: String, icon: String, active: Bool,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            Image(systemName: active ? icon + ".fill" : icon)
-                .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(active ? .primary : .secondary)
-                .frame(width: 32, height: 32)
-                .contentShape(Rectangle())
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 11, weight: .medium))
+                Text(label)
+                    .font(.system(size: 12, weight: .medium))
+            }
+            .foregroundStyle(active ? .primary : .secondary)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background {
+                if active {
+                    Capsule().fill(Color.accentColor.opacity(0.18))
+                }
+            }
         }
         .buttonStyle(.plain)
     }

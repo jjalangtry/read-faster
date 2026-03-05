@@ -143,17 +143,10 @@ struct RSVPView: View {
         .padding(.horizontal, 20)
     }
 
-    // MARK: - Toolbar (mode toggles + … menu)
+    // MARK: - Toolbar (… menu only)
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
-        ToolbarItemGroup(placement: .principal) {
-            DisplayModeBar(
-                wordDisplayModeRaw: $wordDisplayModeRaw,
-                showContext: $engine.showSentenceContext
-            )
-        }
-
         ToolbarItem(placement: .primaryAction) {
             Menu {
                 Button { showingBookmarks = true } label: {
@@ -193,33 +186,42 @@ struct RSVPView: View {
         }
     }
 
-    // MARK: - RSVP Hero (pinned word display, scrolling context above)
+    // MARK: - RSVP Hero (pinned box, context fills 80% of space above)
 
     @ViewBuilder
     private func rsvpHero(geometry: GeometryProxy) -> some View {
         let heroWidth = min(geometry.size.width - 48, 640.0)
 
-        VStack(spacing: 0) {
-            Spacer(minLength: 0)
+        GeometryReader { heroGeo in
+            let wordBoxHeight: CGFloat = 180
+            let spaceAbove = heroGeo.size.height - wordBoxHeight - 20
+            let contextHeight = max(60, spaceAbove * 0.8)
 
-            if engine.showSentenceContext {
-                SentenceContextView(
-                    words: engine.currentSentenceWords,
-                    currentWordIndex: engine.currentWordIndexInSentence,
-                    allBookWords: book.words,
-                    globalWordIndex: engine.currentIndex
+            VStack(spacing: 0) {
+                if engine.showSentenceContext && spaceAbove > 80 {
+                    Spacer(minLength: 0)
+
+                    SentenceContextView(
+                        allBookWords: book.words,
+                        globalWordIndex: engine.currentIndex
+                    )
+                    .frame(maxWidth: heroWidth, height: contextHeight)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+
+                    Spacer(minLength: 0)
+                        .frame(maxHeight: 20)
+                } else {
+                    Spacer()
+                }
+
+                WordDisplay(
+                    word: engine.currentWord,
+                    usesChunkLayout: wordDisplayMode == .threeWordChunk
                 )
                 .frame(maxWidth: heroWidth)
-                .padding(.bottom, 10)
+                .contentShape(Rectangle())
+                .onTapGesture { tapToggle() }
             }
-
-            WordDisplay(
-                word: engine.currentWord,
-                usesChunkLayout: wordDisplayMode == .threeWordChunk
-            )
-            .frame(maxWidth: heroWidth)
-            .contentShape(Rectangle())
-            .onTapGesture { tapToggle() }
         }
     }
 
@@ -251,6 +253,13 @@ struct RSVPView: View {
             WPMControl(wpm: $engine.wordsPerMinute)
                 .frame(maxWidth: maxW)
                 .opacity(controlsOpacity)
+                .padding(.bottom, 12)
+
+            DisplayModeBar(
+                wordDisplayModeRaw: $wordDisplayModeRaw,
+                showContext: $engine.showSentenceContext
+            )
+            .opacity(controlsOpacity)
         }
     }
 

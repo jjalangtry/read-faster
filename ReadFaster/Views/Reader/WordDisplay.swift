@@ -5,7 +5,6 @@ struct WordDisplay: View {
     var usesChunkLayout: Bool = false
 
     @AppStorage("fontSize") private var fontSize: Double = 48
-    @State private var animate = false
 
     private var orpWord: ORPWord {
         ORPWord(word: word)
@@ -25,13 +24,7 @@ struct WordDisplay: View {
         .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 28))
         .accessibilityElement()
         .accessibilityLabel(word)
-        .onChange(of: word) { _, _ in
-            animate = false
-            withAnimation(.easeOut(duration: 0.06)) { animate = true }
-        }
     }
-
-    // MARK: - Single Word
 
     private var singleWordView: some View {
         HStack(spacing: 0) {
@@ -53,36 +46,26 @@ struct WordDisplay: View {
         .minimumScaleFactor(0.5)
     }
 
-    // MARK: - Chunk Mode (centered focal, shrink-to-fit)
-
+    // Chunk: single concatenated Text so minimumScaleFactor shrinks
+    // all characters uniformly (red letter included).
     private var chunkView: some View {
+        chunkText
+            .font(AppFont.rsvpPhrase(size: max(30, fontSize * 0.72)))
+            .lineLimit(1)
+            .minimumScaleFactor(0.35)
+            .frame(maxWidth: .infinity, minHeight: 72)
+            .multilineTextAlignment(.center)
+    }
+
+    private var chunkText: Text {
         let parts = chunkDisplayParts
-        let chunkFont = AppFont.rsvpPhrase(size: max(30, fontSize * 0.72))
-
-        return HStack(spacing: 0) {
-            if let focal = parts.anchor.focal {
-                Text(parts.leadingText)
-                    .foregroundStyle(.primary)
-                    .frame(minWidth: 0, maxWidth: .infinity, alignment: .trailing)
-                    .minimumScaleFactor(0.4)
-
-                Text(String(focal))
-                    .foregroundStyle(.red)
-
-                Text(parts.trailingText)
-                    .foregroundStyle(.primary)
-                    .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
-                    .minimumScaleFactor(0.4)
-            } else {
-                Text(parts.before + parts.anchor.fullWord + parts.after)
-                    .foregroundStyle(.primary)
-                    .frame(maxWidth: .infinity)
-                    .minimumScaleFactor(0.4)
-            }
+        guard let focal = parts.anchor.focal else {
+            return Text(parts.before + parts.anchor.fullWord + parts.after)
+                .foregroundColor(.primary)
         }
-        .font(chunkFont)
-        .lineLimit(1)
-        .frame(maxWidth: .infinity, minHeight: 72)
+        return Text(parts.leadingText).foregroundColor(.primary)
+            + Text(String(focal)).foregroundColor(.red)
+            + Text(parts.trailingText).foregroundColor(.primary)
     }
 
     private var chunkDisplayParts: ChunkDisplayParts {
@@ -107,7 +90,6 @@ struct WordDisplay: View {
         let before: String
         let anchor: ORPWord
         let after: String
-
         var leadingText: String { before + anchor.before }
         var trailingText: String { anchor.after + after }
     }
