@@ -141,9 +141,8 @@ struct SentenceContextView: View {
 
             var wordAttr = AttributedString(word)
             if gIdx >= globalWordIndex && gIdx < highlightEnd {
-                wordAttr.foregroundColor = Color.primary
+                wordAttr.foregroundColor = Color.accentColor
                 wordAttr.underlineStyle = .single
-                wordAttr.underlineColor = Color.accentColor
             } else if gIdx < globalWordIndex {
                 wordAttr.foregroundColor = Color.primary.opacity(0.5)
             } else {
