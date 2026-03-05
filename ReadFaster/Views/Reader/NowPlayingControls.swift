@@ -51,8 +51,8 @@ private struct WPMPreset: Identifiable {
     var id: Int { wpm }
 
     var normalizedPosition: Double {
-        let range = Double(RSVPEngine.maxWPM - RSVPEngine.minWPM)
-        return Double(wpm - RSVPEngine.minWPM) / range
+        let range = Double(1000 - 200)
+        return Double(wpm - 200) / range
     }
 }
 

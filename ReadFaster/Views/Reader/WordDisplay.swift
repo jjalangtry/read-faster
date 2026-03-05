@@ -26,8 +26,6 @@ struct WordDisplay: View {
         .accessibilityLabel(word)
     }
 
-    // MARK: - Single Word (HStack centering, ORP in center)
-
     private var singleWordView: some View {
         HStack(spacing: 0) {
             Text(orpWord.before)
@@ -46,12 +44,6 @@ struct WordDisplay: View {
         .minimumScaleFactor(0.5)
     }
 
-    // MARK: - Chunk Mode (uniform font, centered focal)
-    // Single concatenated Text for guaranteed uniform scaling.
-    // The whole phrase is centered; the red letter is always the
-    // ORP of the middle word of the chunk, which is the character
-    // closest to the center of the full phrase string.
-
     private var chunkView: some View {
         chunkText
             .font(AppFont.rsvpPhrase(size: max(28, fontSize * 0.65)))
@@ -64,7 +56,7 @@ struct WordDisplay: View {
         let full = word
         let words = full.split(whereSeparator: \.isWhitespace).map(String.init)
         guard !words.isEmpty else {
-            return Text(full).foregroundColor(.primary)
+            return Text(full)
         }
 
         let anchorIdx = words.count >= 2 ? 1 : 0
@@ -76,20 +68,18 @@ struct WordDisplay: View {
             charIndex += words[idx].count + 1
         }
         charIndex += orpPos
-        let focalGlobalIndex = charIndex
+        let focalIndex = charIndex
 
         let chars = Array(full)
-        guard focalGlobalIndex < chars.count else {
-            return Text(full).foregroundColor(.primary)
+        guard focalIndex < chars.count else {
+            return Text(full)
         }
 
-        let before = String(chars[0..<focalGlobalIndex])
-        let focal = String(chars[focalGlobalIndex])
-        let after = String(chars[(focalGlobalIndex + 1)...])
+        let before = String(chars[0..<focalIndex])
+        let focal = String(chars[focalIndex])
+        let after = String(chars[(focalIndex + 1)...])
 
-        return Text(before).foregroundColor(.primary)
-            + Text(focal).foregroundColor(.red)
-            + Text(after).foregroundColor(.primary)
+        return Text("\(Text(before).foregroundColor(.primary))\(Text(focal).foregroundColor(.red))\(Text(after).foregroundColor(.primary))")
     }
 }
 

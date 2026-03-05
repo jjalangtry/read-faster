@@ -6,15 +6,13 @@ struct SentenceContextView: View {
     let globalWordIndex: Int
     var highlightCount: Int = 1
 
-    @State private var wordToLine: [Int: Int] = [:]
+    @State private var lineStarts: [Int] = []
+    @State private var splitLines: [String] = []
     @State private var lastLine: Int = -1
+    @State private var built = false
 
     private var highlightEnd: Int {
         min(globalWordIndex + highlightCount, allBookWords.count)
-    }
-
-    private var lines: [String] {
-        bookContent.components(separatedBy: .newlines)
     }
 
     var body: some View {
@@ -25,11 +23,11 @@ struct SentenceContextView: View {
                 ScrollView(.vertical, showsIndicators: false) {
                     LazyVStack(alignment: .leading, spacing: 4) {
                         ForEach(
-                            Array(lines.enumerated()), id: \.offset
+                            Array(splitLines.enumerated()), id: \.offset
                         ) { lineIdx, line in
-                            if line.trimmingCharacters(
-                                in: .whitespaces
-                            ).isEmpty {
+                            if line.trimmingCharacters(in: .whitespaces)
+                                .isEmpty
+                            {
                                 Spacer().frame(height: 12).id(lineIdx)
                             } else {
                                 lineView(line, lineIndex: lineIdx)
@@ -41,71 +39,72 @@ struct SentenceContextView: View {
                     .padding(.vertical, 80)
                 }
                 .scrollDisabled(true)
-                .onAppear { buildIndex(); scrollToCurrentLine(proxy) }
+                .onAppear {
+                    if !built { buildOnce() }
+                    scrollToLine(proxy, animated: false)
+                }
                 .onChange(of: globalWordIndex) { _, _ in
-                    scrollToCurrentLine(proxy)
+                    scrollToLine(proxy, animated: true)
                 }
             }
         }
     }
 
-    private func scrollToCurrentLine(_ proxy: ScrollViewProxy) {
-        let line = findCurrentLine()
-        if line != lastLine {
-            lastLine = line
+    private func buildOnce() {
+        splitLines = bookContent.components(separatedBy: .newlines)
+        var starts: [Int] = []
+        var count = 0
+        for line in splitLines {
+            starts.append(count)
+            count += line.split(whereSeparator: {
+                $0.isWhitespace || $0.isNewline
+            }).count
+        }
+        lineStarts = starts
+        built = true
+    }
+
+    private func lineForWord(_ wordIdx: Int) -> Int {
+        var result = 0
+        for idx in 0..<lineStarts.count {
+            if lineStarts[idx] > wordIdx { break }
+            result = idx
+        }
+        return result
+    }
+
+    private func scrollToLine(
+        _ proxy: ScrollViewProxy, animated: Bool
+    ) {
+        let line = lineForWord(globalWordIndex)
+        guard line != lastLine else { return }
+        lastLine = line
+        if animated {
             withAnimation(.easeInOut(duration: 0.4)) {
                 proxy.scrollTo(line, anchor: .center)
             }
+        } else {
+            proxy.scrollTo(line, anchor: .center)
         }
     }
 
-    private func findCurrentLine() -> Int {
-        if let cached = wordToLine[globalWordIndex] { return cached }
-        var wordCount = 0
-        for (lineIdx, line) in lines.enumerated() {
-            let wordsInLine = line.split(whereSeparator: {
-                $0.isWhitespace || $0.isNewline
-            }).count
-            if globalWordIndex < wordCount + wordsInLine {
-                wordToLine[globalWordIndex] = lineIdx
-                return lineIdx
-            }
-            wordCount += wordsInLine
-        }
-        return max(0, lines.count - 1)
-    }
-
-    private func buildIndex() {
-        var wordCount = 0
-        for (lineIdx, line) in lines.enumerated() {
-            let wordsInLine = line.split(whereSeparator: {
-                $0.isWhitespace || $0.isNewline
-            }).count
-            for wIdx in wordCount..<(wordCount + wordsInLine) {
-                wordToLine[wIdx] = lineIdx
-            }
-            wordCount += wordsInLine
-        }
+    private func lineGlobalStart(_ lineIdx: Int) -> Int {
+        guard lineIdx < lineStarts.count else { return allBookWords.count }
+        return lineStarts[lineIdx]
     }
 
     @ViewBuilder
     private func lineView(_ line: String, lineIndex: Int) -> some View {
-        let lineWords = line.split(whereSeparator: {
-            $0.isWhitespace
-        }).map(String.init)
+        let lineWords = line.split(whereSeparator: \.isWhitespace)
+            .map(String.init)
+        let start = lineGlobalStart(lineIndex)
+        let end = start + lineWords.count
 
-        let lineGlobalStart = globalStartForLine(lineIndex)
-        let lineGlobalEnd = lineGlobalStart + lineWords.count
+        let hasHL = globalWordIndex < end && highlightEnd > start
 
-        let hasHighlight = globalWordIndex < lineGlobalEnd
-            && highlightEnd > lineGlobalStart
-
-        if hasHighlight {
-            highlightedLineText(
-                line: line, lineWords: lineWords,
-                lineStart: lineGlobalStart
-            )
-        } else if lineGlobalEnd <= globalWordIndex {
+        if hasHL {
+            highlightedLine(line, lineWords: lineWords, start: start)
+        } else if end <= globalWordIndex {
             Text(line)
                 .font(AppFont.contextWord(highlighted: false))
                 .foregroundColor(Color.primary.opacity(0.5))
@@ -116,14 +115,14 @@ struct SentenceContextView: View {
         }
     }
 
-    private func highlightedLineText(
-        line: String, lineWords: [String], lineStart: Int
+    private func highlightedLine(
+        _ line: String, lineWords: [String], start: Int
     ) -> some View {
-        var parts: [Text] = []
+        var attr = AttributedString()
         var searchFrom = line.startIndex
 
         for (localIdx, word) in lineWords.enumerated() {
-            let gIdx = lineStart + localIdx
+            let gIdx = start + localIdx
 
             guard let range = line.range(
                 of: word,
@@ -131,55 +130,36 @@ struct SentenceContextView: View {
             ) else { continue }
 
             if searchFrom < range.lowerBound {
-                let gap = String(line[searchFrom..<range.lowerBound])
-                let opacity: Double = gIdx <= globalWordIndex ? 0.5 : 0.35
-                parts.append(
-                    Text(gap).foregroundColor(
-                        Color.primary.opacity(opacity)
-                    )
+                var gap = AttributedString(
+                    String(line[searchFrom..<range.lowerBound])
                 )
+                gap.foregroundColor = gIdx <= globalWordIndex
+                    ? Color.primary.opacity(0.5)
+                    : Color.primary.opacity(0.35)
+                attr.append(gap)
             }
 
-            let isHL = gIdx >= globalWordIndex && gIdx < highlightEnd
-
-            if isHL {
-                parts.append(
-                    Text(word)
-                        .foregroundColor(Color.primary)
-                        .underline(true, color: Color.accentColor)
-                )
+            var wordAttr = AttributedString(word)
+            if gIdx >= globalWordIndex && gIdx < highlightEnd {
+                wordAttr.foregroundColor = Color.primary
+                wordAttr.underlineStyle = .single
+                wordAttr.underlineColor = Color.accentColor
             } else if gIdx < globalWordIndex {
-                parts.append(
-                    Text(word).foregroundColor(Color.primary.opacity(0.5))
-                )
+                wordAttr.foregroundColor = Color.primary.opacity(0.5)
             } else {
-                parts.append(
-                    Text(word).foregroundColor(Color.primary.opacity(0.35))
-                )
+                wordAttr.foregroundColor = Color.primary.opacity(0.35)
             }
-
+            attr.append(wordAttr)
             searchFrom = range.upperBound
         }
 
         if searchFrom < line.endIndex {
-            parts.append(
-                Text(String(line[searchFrom...]))
-                    .foregroundColor(Color.primary.opacity(0.35))
-            )
+            var tail = AttributedString(String(line[searchFrom...]))
+            tail.foregroundColor = Color.primary.opacity(0.35)
+            attr.append(tail)
         }
 
-        let combined = parts.reduce(Text(""), +)
-        return combined
+        return Text(attr)
             .font(AppFont.contextWord(highlighted: false))
-    }
-
-    private func globalStartForLine(_ lineIndex: Int) -> Int {
-        var count = 0
-        for idx in 0..<lineIndex {
-            count += lines[idx].split(whereSeparator: {
-                $0.isWhitespace || $0.isNewline
-            }).count
-        }
-        return count
     }
 }
