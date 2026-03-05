@@ -16,9 +16,7 @@ struct WordDisplay: View {
             if !usesChunkLayout {
                 singleWordView
             } else {
-                chunkHighlightedView
-                    .font(AppFont.rsvpPhrase(size: max(30, fontSize * 0.72)))
-                    .frame(maxWidth: .infinity, minHeight: 72)
+                chunkView
             }
         }
         .padding(.horizontal, 28)
@@ -36,7 +34,7 @@ struct WordDisplay: View {
         }
     }
 
-    // MARK: - Single Word (no guide lines — glass card is the boundary)
+    // MARK: - Single Word
 
     private var singleWordView: some View {
         HStack(spacing: 0) {
@@ -58,31 +56,25 @@ struct WordDisplay: View {
         .minimumScaleFactor(0.5)
     }
 
-    // MARK: - Chunk Mode
+    // MARK: - Chunk Mode (single attributed text to prevent split scaling)
 
-    @ViewBuilder
-    private var chunkHighlightedView: some View {
-        let parts = chunkDisplayParts
-        if let focal = parts.anchor.focal {
-            HStack(spacing: 0) {
-                Text(parts.leadingText)
-                    .foregroundStyle(.primary)
-                    .frame(minWidth: 0, maxWidth: .infinity, alignment: .trailing)
-                Text(String(focal))
-                    .foregroundStyle(.red)
-                Text(parts.trailingText)
-                    .foregroundStyle(.primary)
-                    .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
-            }
+    private var chunkView: some View {
+        chunkAttributedText
+            .font(AppFont.rsvpPhrase(size: max(30, fontSize * 0.72)))
             .lineLimit(1)
-            .minimumScaleFactor(0.65)
-        } else {
-            Text(parts.before + parts.anchor.fullWord + parts.after)
-                .foregroundStyle(.primary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.65)
-                .multilineTextAlignment(.center)
+            .minimumScaleFactor(0.5)
+            .frame(maxWidth: .infinity, minHeight: 72)
+    }
+
+    private var chunkAttributedText: Text {
+        let parts = chunkDisplayParts
+        guard let focal = parts.anchor.focal else {
+            return Text(parts.before + parts.anchor.fullWord + parts.after)
+                .foregroundColor(.primary)
         }
+        return Text(parts.leadingText).foregroundColor(.primary)
+            + Text(String(focal)).foregroundColor(.red)
+            + Text(parts.trailingText).foregroundColor(.primary)
     }
 
     private var chunkDisplayParts: ChunkDisplayParts {

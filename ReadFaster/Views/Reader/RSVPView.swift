@@ -191,12 +191,7 @@ struct RSVPView: View {
                     words: engine.currentSentenceWords,
                     currentWordIndex: engine.currentWordIndexInSentence
                 )
-                .frame(
-                    maxWidth: min(geometry.size.width * 0.92, 600),
-                    maxHeight: 72,
-                    alignment: .top
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .frame(maxWidth: min(geometry.size.width * 0.92, 600))
             }
 
             WordDisplay(
@@ -230,9 +225,14 @@ struct RSVPView: View {
                 .opacity(controlsOpacity)
                 .padding(.bottom, 18)
 
-            transportRow
+            transportControls
                 .frame(maxWidth: maxW)
-                .padding(.bottom, 16)
+                .padding(.bottom, 20)
+
+            WPMControl(wpm: $engine.wordsPerMinute)
+                .frame(maxWidth: maxW)
+                .opacity(controlsOpacity)
+                .padding(.bottom, 12)
 
             DisplayModeBar(
                 wordDisplayModeRaw: $wordDisplayModeRaw,
@@ -267,7 +267,7 @@ struct RSVPView: View {
         }
     }
 
-    // MARK: - Chapter Button (icon-only circle, spans both lines)
+    // MARK: - Chapter Button (circular, same size as … toolbar button)
 
     private var chapterButton: some View {
         Menu {
@@ -284,11 +284,7 @@ struct RSVPView: View {
             }
         } label: {
             Image(systemName: "list.bullet")
-                .font(.system(size: 18, weight: .medium))
-                .frame(width: 48, height: 48)
-                .contentShape(Circle())
         }
-        .buttonStyle(.glass)
         #if os(iOS)
         .sensoryFeedback(.selection, trigger: currentChapter?.id)
         #endif
@@ -344,32 +340,31 @@ struct RSVPView: View {
         .padding(.top, 2)
     }
 
-    // MARK: - Transport Row (back | play | forward | wpm)
+    // MARK: - Transport Controls
 
-    private var transportRow: some View {
-        HStack(spacing: 0) {
-            Spacer()
-            TransportButton(
-                icon: "backward.fill",
-                disabled: !engine.hasContent || engine.isAtStart,
-                size: 44
-            ) { engine.previousSentence() }
-            Spacer()
-            PlayPauseButton(
-                isPlaying: engine.isPlaying,
-                disabled: !engine.hasContent,
-                size: 56
-            ) { engine.toggle() }
-            Spacer()
-            TransportButton(
-                icon: "forward.fill",
-                disabled: engine.isAtEnd,
-                size: 44
-            ) { engine.nextSentence() }
-            Spacer()
-            WPMButton(wpm: $engine.wordsPerMinute)
-                .opacity(controlsOpacity)
-            Spacer()
+    private var transportControls: some View {
+        GlassEffectContainer {
+            HStack {
+                Spacer()
+                TransportButton(
+                    icon: "backward.fill",
+                    disabled: !engine.hasContent || engine.isAtStart,
+                    size: 44
+                ) { engine.previousSentence() }
+                Spacer()
+                PlayPauseButton(
+                    isPlaying: engine.isPlaying,
+                    disabled: !engine.hasContent,
+                    size: 56
+                ) { engine.toggle() }
+                Spacer()
+                TransportButton(
+                    icon: "forward.fill",
+                    disabled: engine.isAtEnd,
+                    size: 44
+                ) { engine.nextSentence() }
+                Spacer()
+            }
         }
     }
 }

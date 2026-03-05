@@ -49,6 +49,10 @@ private struct WPMPreset: Identifiable {
     let wpm: Int
     let icon: String
     var id: Int { wpm }
+
+    var normalizedPosition: Double {
+        Double(wpm - RSVPEngine.minWPM) / Double(RSVPEngine.maxWPM - RSVPEngine.minWPM)
+    }
 }
 
 private let wpmPresets: [WPMPreset] = [
@@ -60,102 +64,175 @@ private let wpmPresets: [WPMPreset] = [
 
 private let wpmSnapThreshold = 40
 
-// MARK: - WPM Button (compact circle that opens popover)
+// MARK: - WPM Control (inline stepper with expandable tick-mark slider)
 
-struct WPMButton: View {
+struct WPMControl: View {
     @Binding var wpm: Int
-    @State private var showingPopover = false
+    @State private var isExpanded = false
     @State private var sliderValue: Double = 300
     @State private var lastSnappedPreset: Int?
 
+    private let step = 25
+
     var body: some View {
-        Button {
-            sliderValue = Double(wpm)
-            lastSnappedPreset = nil
-            showingPopover = true
-        } label: {
-            Image(systemName: "speedometer")
-                .font(.system(size: 18, weight: .regular))
-                .frame(width: 44, height: 44)
-                .contentShape(Circle())
+        Group {
+            if isExpanded {
+                expandedSlider
+            } else {
+                compactStepper
+            }
         }
-        .buttonStyle(.glass)
-        .popover(isPresented: $showingPopover) {
-            wpmPopoverContent
-                .presentationCompactAdaptation(.popover)
-        }
+        .animation(
+            .spring(response: 0.35, dampingFraction: 0.85),
+            value: isExpanded
+        )
     }
 
-    private var wpmPopoverContent: some View {
-        VStack(spacing: 10) {
-            Text("\(wpm) WPM")
-                .font(.system(size: 15, weight: .semibold))
-                .monospacedDigit()
+    // MARK: Compact
 
-            HStack(spacing: 8) {
-                Button { adjustWPM(by: -25) } label: {
-                    Image(systemName: "minus")
+    private var compactStepper: some View {
+        HStack(spacing: 0) {
+            Button { adjustWPM(by: -step) } label: {
+                Image(systemName: "minus")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(
+                        wpm <= RSVPEngine.minWPM ? .tertiary : .primary
+                    )
+                    .frame(width: 44, height: 40)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(wpm <= RSVPEngine.minWPM)
+
+            Button {
+                sliderValue = Double(wpm)
+                lastSnappedPreset = nil
+                withAnimation { isExpanded = true }
+            } label: {
+                Text("\(wpm) WPM")
+                    .font(AppFont.semibold(size: 15))
+                    .monospacedDigit()
+                    .frame(minWidth: 80, minHeight: 40)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            Button { adjustWPM(by: step) } label: {
+                Image(systemName: "plus")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(
+                        wpm >= RSVPEngine.maxWPM ? .tertiary : .primary
+                    )
+                    .frame(width: 44, height: 40)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(wpm >= RSVPEngine.maxWPM)
+        }
+        .padding(.horizontal, 4)
+        .glassEffect(.regular.interactive(), in: .capsule)
+        #if os(iOS)
+        .sensoryFeedback(.selection, trigger: wpm)
+        #endif
+    }
+
+    // MARK: Expanded (slider with 4 tick marks on the track)
+
+    private var expandedSlider: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 10) {
+                Button {
+                    withAnimation { isExpanded = false }
+                } label: {
+                    Image(systemName: "xmark")
                         .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
                         .frame(width: 28, height: 28)
+                        .contentShape(Circle())
                 }
-                .buttonStyle(.glass)
-                .disabled(wpm <= RSVPEngine.minWPM)
+                .buttonStyle(.plain)
 
+                Text("\(wpm) WPM")
+                    .font(AppFont.semibold(size: 14))
+                    .monospacedDigit()
+
+                Spacer()
+            }
+            .padding(.bottom, 8)
+
+            ZStack(alignment: .leading) {
                 Slider(
                     value: $sliderValue,
                     in: Double(RSVPEngine.minWPM)...Double(RSVPEngine.maxWPM),
-                    step: 25
+                    step: Double(step)
                 )
-                .frame(minWidth: 160)
                 .onChange(of: sliderValue) { _, newValue in
                     let rounded = Int(newValue)
                     wpm = rounded
                     snapIfClose(rounded)
                 }
 
-                Button { adjustWPM(by: 25) } label: {
-                    Image(systemName: "plus")
-                        .font(.caption.weight(.semibold))
-                        .frame(width: 28, height: 28)
-                }
-                .buttonStyle(.glass)
-                .disabled(wpm >= RSVPEngine.maxWPM)
+                presetMarkers
+                    .allowsHitTesting(false)
             }
+            .padding(.bottom, 4)
 
-            HStack {
-                ForEach(wpmPresets) { preset in
-                    Spacer()
-                    Button {
-                        sliderValue = Double(preset.wpm)
-                        wpm = preset.wpm
-                        lastSnappedPreset = preset.wpm
-                    } label: {
-                        VStack(spacing: 2) {
-                            Circle()
-                                .fill(
-                                    isNear(preset.wpm)
-                                        ? Color.accentColor
-                                        : Color.secondary.opacity(0.3)
-                                )
-                                .frame(width: 5, height: 5)
-                            Image(systemName: preset.icon)
-                                .font(.system(size: 10))
-                                .foregroundStyle(
-                                    isNear(preset.wpm)
-                                        ? Color.accentColor : .secondary
-                                )
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    Spacer()
-                }
+            presetIcons
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 18))
+        #if os(iOS)
+        .sensoryFeedback(.impact(weight: .medium), trigger: lastSnappedPreset)
+        #endif
+    }
+
+    private var presetMarkers: some View {
+        GeometryReader { geo in
+            let trackInset: CGFloat = 16
+            let usableWidth = geo.size.width - trackInset * 2
+
+            ForEach(wpmPresets) { preset in
+                let xPos = trackInset + usableWidth * preset.normalizedPosition
+
+                Circle()
+                    .fill(
+                        isNear(preset.wpm)
+                            ? Color.accentColor
+                            : Color.secondary.opacity(0.5)
+                    )
+                    .frame(width: 6, height: 6)
+                    .position(x: xPos, y: geo.size.height / 2)
             }
         }
-        .padding(16)
-        .frame(width: 280)
-        #if os(iOS)
-        .sensoryFeedback(.selection, trigger: lastSnappedPreset)
-        #endif
+        .frame(height: 28)
+    }
+
+    private var presetIcons: some View {
+        GeometryReader { geo in
+            let trackInset: CGFloat = 16
+            let usableWidth = geo.size.width - trackInset * 2
+
+            ForEach(wpmPresets) { preset in
+                let xPos = trackInset + usableWidth * preset.normalizedPosition
+
+                Button {
+                    sliderValue = Double(preset.wpm)
+                    wpm = preset.wpm
+                    lastSnappedPreset = preset.wpm
+                } label: {
+                    Image(systemName: preset.icon)
+                        .font(.system(size: 10))
+                        .foregroundStyle(
+                            isNear(preset.wpm)
+                                ? Color.accentColor : .secondary
+                        )
+                }
+                .buttonStyle(.plain)
+                .position(x: xPos, y: geo.size.height / 2)
+            }
+        }
+        .frame(height: 16)
     }
 
     private func isNear(_ target: Int) -> Bool {
@@ -178,56 +255,6 @@ struct WPMButton: View {
         let clamped = min(RSVPEngine.maxWPM, max(RSVPEngine.minWPM, wpm + delta))
         wpm = clamped
         sliderValue = Double(clamped)
-    }
-}
-
-// MARK: - WPM Control (inline compact stepper, kept for backward compat)
-
-struct WPMControl: View {
-    @Binding var wpm: Int
-
-    private let step = 25
-
-    var body: some View {
-        HStack(spacing: 0) {
-            Button { adjustWPM(by: -step) } label: {
-                Image(systemName: "minus")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(
-                        wpm <= RSVPEngine.minWPM ? .tertiary : .primary
-                    )
-                    .frame(width: 44, height: 40)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .disabled(wpm <= RSVPEngine.minWPM)
-
-            Text("\(wpm) WPM")
-                .font(AppFont.semibold(size: 15))
-                .monospacedDigit()
-                .frame(minWidth: 80, minHeight: 40)
-
-            Button { adjustWPM(by: step) } label: {
-                Image(systemName: "plus")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(
-                        wpm >= RSVPEngine.maxWPM ? .tertiary : .primary
-                    )
-                    .frame(width: 44, height: 40)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .disabled(wpm >= RSVPEngine.maxWPM)
-        }
-        .padding(.horizontal, 4)
-        .glassEffect(.regular.interactive(), in: .capsule)
-        #if os(iOS)
-        .sensoryFeedback(.selection, trigger: wpm)
-        #endif
-    }
-
-    private func adjustWPM(by delta: Int) {
-        wpm = min(RSVPEngine.maxWPM, max(RSVPEngine.minWPM, wpm + delta))
     }
 }
 
