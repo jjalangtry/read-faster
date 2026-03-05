@@ -205,7 +205,8 @@ struct RSVPView: View {
                         allBookWords: book.words,
                         globalWordIndex: engine.currentIndex
                     )
-                    .frame(maxWidth: heroWidth, height: contextHeight)
+                    .frame(maxWidth: heroWidth)
+                    .frame(height: contextHeight)
                     .clipShape(RoundedRectangle(cornerRadius: 14))
 
                     Spacer(minLength: 0)
