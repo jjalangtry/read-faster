@@ -8,12 +8,13 @@ struct SentenceContextView: View {
 
     @State private var lineStarts: [Int] = []
     @State private var splitLines: [String] = []
-    @State private var lastLine: Int = -1
     @State private var built = false
 
     private var highlightEnd: Int {
         min(globalWordIndex + highlightCount, allBookWords.count)
     }
+
+    private let maxLineWords = 12
 
     var body: some View {
         if allBookWords.isEmpty {
@@ -25,9 +26,7 @@ struct SentenceContextView: View {
                         ForEach(
                             Array(splitLines.enumerated()), id: \.offset
                         ) { lineIdx, line in
-                            if line.trimmingCharacters(in: .whitespaces)
-                                .isEmpty
-                            {
+                            if line.isEmpty {
                                 Spacer().frame(height: 12).id(lineIdx)
                             } else {
                                 lineView(line, lineIndex: lineIdx)
@@ -40,29 +39,59 @@ struct SentenceContextView: View {
                 }
                 .scrollDisabled(true)
                 .onAppear {
-                    if !built { buildOnce() }
+                    if !built { buildLines() }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        scrollToLine(proxy, animated: false)
+                        let target = lineForWord(globalWordIndex)
+                        proxy.scrollTo(target, anchor: .center)
                     }
                 }
                 .onChange(of: globalWordIndex) { _, _ in
-                    if !built { buildOnce() }
-                    scrollToLine(proxy, animated: true)
+                    if !built { buildLines() }
+                    let target = lineForWord(globalWordIndex)
+                    withAnimation(.easeInOut(duration: 0.35)) {
+                        proxy.scrollTo(target, anchor: .center)
+                    }
                 }
             }
         }
     }
 
-    private func buildOnce() {
-        splitLines = bookContent.components(separatedBy: .newlines)
+    private func buildLines() {
+        let rawLines = bookContent.components(separatedBy: .newlines)
+        var result: [String] = []
         var starts: [Int] = []
-        var count = 0
-        for line in splitLines {
-            starts.append(count)
-            count += line.split(whereSeparator: {
-                $0.isWhitespace || $0.isNewline
-            }).count
+        var wordCount = 0
+
+        for rawLine in rawLines {
+            let trimmed = rawLine.trimmingCharacters(in: .whitespaces)
+            if trimmed.isEmpty {
+                result.append("")
+                starts.append(wordCount)
+                continue
+            }
+
+            let words = trimmed.split(
+                whereSeparator: \.isWhitespace
+            ).map(String.init)
+
+            if words.count <= maxLineWords {
+                result.append(trimmed)
+                starts.append(wordCount)
+                wordCount += words.count
+            } else {
+                var idx = 0
+                while idx < words.count {
+                    let end = min(idx + maxLineWords, words.count)
+                    let chunk = words[idx..<end].joined(separator: " ")
+                    result.append(chunk)
+                    starts.append(wordCount + idx)
+                    idx = end
+                }
+                wordCount += words.count
+            }
         }
+
+        splitLines = result
         lineStarts = starts
         built = true
     }
@@ -76,37 +105,31 @@ struct SentenceContextView: View {
         return result
     }
 
-    private func scrollToLine(
-        _ proxy: ScrollViewProxy, animated: Bool
-    ) {
-        let line = lineForWord(globalWordIndex)
-        guard line != lastLine else { return }
-        lastLine = line
-        if animated {
-            withAnimation(.easeInOut(duration: 0.4)) {
-                proxy.scrollTo(line, anchor: .center)
-            }
-        } else {
-            proxy.scrollTo(line, anchor: .center)
-        }
-    }
-
     private func lineGlobalStart(_ lineIdx: Int) -> Int {
         guard lineIdx < lineStarts.count else { return allBookWords.count }
         return lineStarts[lineIdx]
     }
 
+    private func lineWordCount(_ lineIdx: Int) -> Int {
+        if lineIdx + 1 < lineStarts.count {
+            return lineStarts[lineIdx + 1] - lineStarts[lineIdx]
+        }
+        return max(0, allBookWords.count - lineStarts[lineIdx])
+    }
+
     @ViewBuilder
     private func lineView(_ line: String, lineIndex: Int) -> some View {
-        let lineWords = line.split(whereSeparator: \.isWhitespace)
-            .map(String.init)
         let start = lineGlobalStart(lineIndex)
-        let end = start + lineWords.count
+        let count = lineWordCount(lineIndex)
+        let end = start + count
+        let lineWords = line.split(
+            whereSeparator: \.isWhitespace
+        ).map(String.init)
 
         let hasHL = globalWordIndex < end && highlightEnd > start
 
         if hasHL {
-            highlightedLine(line, lineWords: lineWords, start: start)
+            highlightedLine(lineWords: lineWords, start: start)
         } else if end <= globalWordIndex {
             Text(line)
                 .font(AppFont.contextWord(highlighted: false))
@@ -119,30 +142,20 @@ struct SentenceContextView: View {
     }
 
     private func highlightedLine(
-        _ line: String, lineWords: [String], start: Int
+        lineWords: [String], start: Int
     ) -> some View {
         var attr = AttributedString()
-        var searchFrom = line.startIndex
 
         for (localIdx, word) in lineWords.enumerated() {
-            let gIdx = start + localIdx
-
-            guard let range = line.range(
-                of: word,
-                range: searchFrom..<line.endIndex
-            ) else { continue }
-
-            if searchFrom < range.lowerBound {
-                var gap = AttributedString(
-                    String(line[searchFrom..<range.lowerBound])
-                )
-                gap.foregroundColor = gIdx <= globalWordIndex
-                    ? Color.primary.opacity(0.5)
-                    : Color.primary.opacity(0.35)
-                attr.append(gap)
+            if localIdx > 0 {
+                var space = AttributedString(" ")
+                space.foregroundColor = Color.primary.opacity(0.35)
+                attr.append(space)
             }
 
+            let gIdx = start + localIdx
             var wordAttr = AttributedString(word)
+
             if gIdx >= globalWordIndex && gIdx < highlightEnd {
                 wordAttr.foregroundColor = Color.accentColor
                 wordAttr.underlineStyle = .single
@@ -152,13 +165,6 @@ struct SentenceContextView: View {
                 wordAttr.foregroundColor = Color.primary.opacity(0.35)
             }
             attr.append(wordAttr)
-            searchFrom = range.upperBound
-        }
-
-        if searchFrom < line.endIndex {
-            var tail = AttributedString(String(line[searchFrom...]))
-            tail.foregroundColor = Color.primary.opacity(0.35)
-            attr.append(tail)
         }
 
         return Text(attr)
