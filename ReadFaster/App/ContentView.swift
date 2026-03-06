@@ -35,6 +35,10 @@ struct ContentView: View {
             Tab("Search", systemImage: "magnifyingglass", value: .search, role: .search) {
                 NavigationStack {
                     SearchResultsView(searchText: $searchText)
+                        .searchable(
+                            text: $searchText,
+                            prompt: "Search your library"
+                        )
                 }
             }
 

@@ -188,9 +188,9 @@ struct RSVPView: View {
             #endif
             LinearGradient(
                 colors: [
-                    coverTintColor.opacity(0.15),
-                    coverTintColor.opacity(0.06),
-                    .clear
+                    coverTintColor.opacity(0.22),
+                    coverTintColor.opacity(0.10),
+                    coverTintColor.opacity(0.03)
                 ],
                 startPoint: .top,
                 endPoint: .bottom
@@ -198,12 +198,12 @@ struct RSVPView: View {
 
             RadialGradient(
                 colors: [
-                    coverTintColor.opacity(0.10),
+                    coverTintColor.opacity(0.18),
                     .clear
                 ],
                 center: .top,
                 startRadius: 0,
-                endRadius: 400
+                endRadius: 500
             )
         }
     }
@@ -305,7 +305,7 @@ struct RSVPView: View {
 
     private var chapterButton: some View {
         Menu {
-            ForEach(book.chapters.flattened) { chapter in
+            ForEach(book.chapters.flattened.reversed()) { chapter in
                 Button {
                     selectChapter(chapter)
                 } label: {
