@@ -44,7 +44,7 @@ struct ContentView: View {
                 }
             }
         }
-        .searchable(text: $searchText, prompt: "Search your library")
+        
         #if os(iOS)
         .tabBarMinimizeBehavior(.onScrollDown)
         #endif

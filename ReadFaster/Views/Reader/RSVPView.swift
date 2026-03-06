@@ -188,12 +188,22 @@ struct RSVPView: View {
             #endif
             LinearGradient(
                 colors: [
-                    coverTintColor.opacity(0.08),
-                    coverTintColor.opacity(0.03),
+                    coverTintColor.opacity(0.15),
+                    coverTintColor.opacity(0.06),
                     .clear
                 ],
                 startPoint: .top,
-                endPoint: .center
+                endPoint: .bottom
+            )
+
+            RadialGradient(
+                colors: [
+                    coverTintColor.opacity(0.10),
+                    .clear
+                ],
+                center: .top,
+                startRadius: 0,
+                endRadius: 400
             )
         }
     }
