@@ -33,7 +33,7 @@ struct LibraryView: View {
         ContentUnavailableView {
             Label("No Books", systemImage: "books.vertical")
         } description: {
-            Text("Import an EPUB, PDF, or text file to get started.")
+            Text("Import an EPUB, PDF, text file, or web link to get started.")
         } actions: {
             Button("Import Book") {
                 showingImport = true

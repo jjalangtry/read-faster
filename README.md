@@ -2,12 +2,13 @@
 
 A speed reading app for macOS and iOS using RSVP (Rapid Serial Visual Presentation) with comprehension-enhancing features.
 
-**Version 0.12.1**
+**Version 1.0.0**
 
 ## Features
 
 - **RSVP Reading**: Words displayed one at a time with optimal recognition point (ORP) highlighting
 - **Multi-format Support**: TXT, EPUB, and PDF files
+- **Web Link Import**: Paste article, PDF, EPUB, or text URLs and import the extracted text
 - **Chapter Navigation**: Hierarchical TOC extraction from EPUBs and PDFs
 - **Adaptive Pacing**: Automatically slows down for complex words and sentence structures
 - **Reading Modes**: Skim (600 WPM), Normal (350 WPM), Study (250 WPM)

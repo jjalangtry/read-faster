@@ -63,6 +63,7 @@ struct BookCard: View {
         case .epub: return "book.closed"
         case .pdf: return "doc.richtext"
         case .txt: return "doc.text"
+        case .web: return "link"
         }
     }
 

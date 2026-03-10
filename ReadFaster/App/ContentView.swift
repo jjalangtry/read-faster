@@ -65,7 +65,7 @@ struct ContentView: View {
             showingImport = true
         }
         .onOpenURL { url in
-            handleIncomingFile(url)
+            handleIncomingURL(url)
         }
         .overlay {
             if isImporting {
@@ -90,19 +90,31 @@ struct ContentView: View {
         }
     }
 
-    private func handleIncomingFile(_ url: URL) {
-        // Check if it's a supported file type
-        let ext = url.pathExtension.lowercased()
-        let supportedExtensions = ["epub", "pdf", "txt", "text", "md"]
+    private func handleIncomingURL(_ url: URL) {
+        if url.isFileURL {
+            let ext = url.pathExtension.lowercased()
+            let supportedExtensions = ["epub", "pdf", "txt", "text", "md"]
 
-        guard supportedExtensions.contains(ext) else {
-            importError = "Unsupported file type: .\(ext)"
+            guard supportedExtensions.contains(ext) else {
+                importError = "Unsupported file type: .\(ext)"
+                showingImportError = true
+                return
+            }
+
+            Task {
+                await importFile(from: url)
+            }
+            return
+        }
+
+        guard let scheme = url.scheme?.lowercased(), ["http", "https"].contains(scheme) else {
+            importError = "Unsupported link: \(url.absoluteString)"
             showingImportError = true
             return
         }
 
         Task {
-            await importFile(from: url)
+            await importRemoteURL(url)
         }
     }
 
@@ -131,6 +143,33 @@ struct ContentView: View {
 
             await MainActor.run {
                 // Switch to library tab and select the new book
+                selectedTab = .library
+                selectedBook = book
+            }
+        } catch {
+            await MainActor.run {
+                importError = error.localizedDescription
+                showingImportError = true
+            }
+        }
+    }
+
+    private func importRemoteURL(_ url: URL) async {
+        await MainActor.run {
+            isImporting = true
+        }
+
+        defer {
+            Task { @MainActor in
+                isImporting = false
+            }
+        }
+
+        do {
+            let storage = StorageService(modelContext: modelContext)
+            let book = try await storage.importBook(fromRemoteURL: url)
+
+            await MainActor.run {
                 selectedTab = .library
                 selectedBook = book
             }

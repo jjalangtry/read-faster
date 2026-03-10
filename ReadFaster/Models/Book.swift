@@ -5,6 +5,7 @@ enum FileType: String, Codable {
     case txt
     case epub
     case pdf
+    case web
 }
 
 @Model

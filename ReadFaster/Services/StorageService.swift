@@ -25,25 +25,25 @@ final class StorageService {
         default: fileType = .txt
         }
 
-        let book = Book(
-            title: document.title,
-            author: document.author,
+        return try saveBook(
+            document: document,
             fileName: url.lastPathComponent,
-            fileType: fileType,
-            coverImage: document.coverImage,
-            content: document.content,
-            totalWords: document.wordCount,
-            chapters: document.chapters
+            fileType: fileType
         )
+    }
 
-        // Create initial progress
-        let progress = ReadingProgress()
-        book.progress = progress
+    func importBook(fromRemoteURL remoteURL: URL) async throws -> Book {
+        let importedDocument = try await RemoteDocumentImporter().importDocument(from: remoteURL)
+        return try saveBook(
+            document: importedDocument.parsedDocument,
+            fileName: importedDocument.fileName,
+            fileType: importedDocument.fileType
+        )
+    }
 
-        modelContext.insert(book)
-        try modelContext.save()
-
-        return book
+    func importBook(fromRemoteURLString rawValue: String) async throws -> Book {
+        let remoteURL = try RemoteDocumentImporter.normalizedURL(from: rawValue)
+        return try await importBook(fromRemoteURL: remoteURL)
     }
 
     func deleteBook(_ book: Book) throws {
@@ -109,5 +109,26 @@ final class StorageService {
 
     func fetchBookmarks(for book: Book) -> [Bookmark] {
         return book.bookmarks.sorted { $0.wordIndex < $1.wordIndex }
+    }
+
+    private func saveBook(document: ParsedDocument, fileName: String, fileType: FileType) throws -> Book {
+        let book = Book(
+            title: document.title,
+            author: document.author,
+            fileName: fileName,
+            fileType: fileType,
+            coverImage: document.coverImage,
+            content: document.content,
+            totalWords: document.wordCount,
+            chapters: document.chapters
+        )
+
+        let progress = ReadingProgress()
+        book.progress = progress
+
+        modelContext.insert(book)
+        try modelContext.save()
+
+        return book
     }
 }
