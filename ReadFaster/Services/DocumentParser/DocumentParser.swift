@@ -363,8 +363,8 @@ struct RemoteDocumentImporter {
             throw DocumentParserError.emptyContent
         }
 
-        let blocks = Array(try rootElement.select("h1, h2, h3, h4, p, li, blockquote, pre"))
-            .map { try normalizeInlineText($0.text()) }
+        let blocks = try Array(try rootElement.select("h1, h2, h3, h4, p, li, blockquote, pre"))
+            .map { normalizeInlineText(try $0.text()) }
             .filter { block in
                 block.split(whereSeparator: \.isWhitespace).count >= 4
             }
