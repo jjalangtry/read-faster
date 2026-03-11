@@ -9,6 +9,7 @@ enum AppTab: Hashable {
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
     @State private var selectedTab: AppTab = .library
     @State private var selectedBook: Book?
     @State private var showingImport = false
@@ -64,7 +65,23 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .importBook)) { _ in
             showingImport = true
         }
+        .task {
+            await importPendingSharedLinkIfAvailable()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            guard newPhase == .active else { return }
+            Task {
+                await importPendingSharedLinkIfAvailable()
+            }
+        }
         .onOpenURL { url in
+            if SharedImportStore.isCallbackURL(url) {
+                Task {
+                    await importPendingSharedLinkIfAvailable()
+                }
+                return
+            }
+
             handleIncomingURL(url)
         }
         .overlay {
@@ -179,6 +196,65 @@ struct ContentView: View {
                 showingImportError = true
             }
         }
+    }
+
+    private func importPendingSharedLinkIfAvailable() async {
+        guard let rawURL = SharedImportStore.takePendingURLString() else {
+            return
+        }
+
+        await MainActor.run {
+            isImporting = true
+        }
+
+        defer {
+            Task { @MainActor in
+                isImporting = false
+            }
+        }
+
+        do {
+            let storage = StorageService(modelContext: modelContext)
+            let book = try await storage.importBook(fromRemoteURLString: rawURL)
+
+            await MainActor.run {
+                selectedTab = .library
+                selectedBook = book
+            }
+        } catch {
+            await MainActor.run {
+                importError = error.localizedDescription
+                showingImportError = true
+            }
+        }
+    }
+}
+
+enum SharedImportConfiguration {
+    static let appGroupIdentifier = "group.com.jakoblangtry.readfaster"
+    static let pendingURLDefaultsKey = "pendingSharedURL"
+    static let callbackScheme = "readfaster"
+    static let callbackHost = "import-shared"
+}
+
+enum SharedImportStore {
+    private static var defaults: UserDefaults? {
+        UserDefaults(suiteName: SharedImportConfiguration.appGroupIdentifier)
+    }
+
+    static func takePendingURLString() -> String? {
+        guard let rawValue = defaults?.string(forKey: SharedImportConfiguration.pendingURLDefaultsKey),
+              !rawValue.isEmpty else {
+            return nil
+        }
+
+        defaults?.removeObject(forKey: SharedImportConfiguration.pendingURLDefaultsKey)
+        return rawValue
+    }
+
+    static func isCallbackURL(_ url: URL) -> Bool {
+        url.scheme?.lowercased() == SharedImportConfiguration.callbackScheme &&
+        url.host?.lowercased() == SharedImportConfiguration.callbackHost
     }
 }
 

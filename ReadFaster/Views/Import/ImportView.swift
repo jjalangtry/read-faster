@@ -1,6 +1,9 @@
 import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
+#if os(iOS)
+import UIKit
+#endif
 
 struct ImportView: View {
     @Environment(\.dismiss) private var dismiss
@@ -16,22 +19,20 @@ struct ImportView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 24) {
-                Spacer()
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 20) {
+                    headerSection
+                    quickImportCard
 
-                dropZone
+                    if isProcessing {
+                        progressSection
+                    }
 
-                linkImportSection
-
-                if isProcessing {
-                    progressSection
+                    supportedFormatsInfo
                 }
-
-                supportedFormatsInfo
-
-                Spacer()
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
             }
-            .padding()
             .navigationTitle("Import Book")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
@@ -58,36 +59,52 @@ struct ImportView: View {
         }
     }
 
-    private var dropZone: some View {
+    private var headerSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Bring in a file or any link")
+                .font(.title2)
+                .fontWeight(.semibold)
+
+            Text("Paste an article URL, share a link from another app, or import a local document.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var quickImportCard: some View {
         GlassEffectContainer {
-            VStack(spacing: 20) {
-                Image(systemName: "doc.badge.plus")
-                    .font(.system(size: 56))
-                    .foregroundStyle(isDragOver ? Color.accentColor : .secondary)
-                    .symbolEffect(.bounce, value: isDragOver)
+            VStack(alignment: .leading, spacing: 18) {
+                HStack(alignment: .top, spacing: 14) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.accentColor.opacity(0.14))
+                            .frame(width: 46, height: 46)
 
-                VStack(spacing: 8) {
-                    Text("Drop a file here")
-                        .font(.title3)
-                        .fontWeight(.medium)
+                        Image(systemName: "square.and.arrow.down.on.square")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundStyle(Color.accentColor)
+                    }
 
-                    Text("or")
-                        .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Quick Import")
+                            .font(.headline)
+
+                        Text("Files, pasted links, and share-sheet links all land in the same library.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
 
-                Button {
-                    isImporting = true
-                } label: {
-                    Text("Browse Files")
-                        .padding(.horizontal, 24)
-                        .padding(.vertical, 12)
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .disabled(isProcessing)
+                browseFilesRow
+
+                Divider()
+
+                linkImportSection
             }
             .frame(maxWidth: .infinity)
-            .padding(48)
+            .padding(24)
             .glassEffect(
                 isDragOver ? .regular.tint(.accentColor) : .regular,
                 in: RoundedRectangle(cornerRadius: 24)
@@ -100,35 +117,70 @@ struct ImportView: View {
         }
     }
 
+    private var browseFilesRow: some View {
+        HStack(alignment: .center, spacing: 14) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Browse local files")
+                    .font(.headline)
+
+                Text("EPUB, PDF, and plain text are supported. You can also drop a file onto this card.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 12)
+
+            Button("Browse Files") {
+                isImporting = true
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .disabled(isProcessing)
+        }
+    }
+
     private var linkImportSection: some View {
-        GlassEffectContainer {
-            VStack(alignment: .leading, spacing: 16) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Label("Import from Link", systemImage: "link")
-                        .font(.headline)
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Import from link")
+                    .font(.headline)
 
-                    Text("Paste a web article, PDF, EPUB, or text URL.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
+                Text("Paste `example.com/article` or a full `https://` link.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
 
-                remoteURLField
+            remoteURLField
 
+            HStack(spacing: 12) {
                 Button {
                     Task {
                         await importRemoteLink()
                     }
                 } label: {
-                    Label("Import Link", systemImage: "arrow.down.circle")
+                    Label("Import Link", systemImage: "link.badge.plus")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
-                .disabled(isProcessing || remoteURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .disabled(isProcessing || normalizedRemoteURLInput.isEmpty)
+
+                #if os(iOS)
+                Button {
+                    remoteURL = UIPasteboard.general.string ?? remoteURL
+                } label: {
+                    Image(systemName: "doc.on.clipboard")
+                        .frame(width: 44, height: 44)
+                }
+                .buttonStyle(.bordered)
+                .disabled(isProcessing)
+                #endif
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(24)
-            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 24))
+
+            Text("No scheme needed. If you omit it, Read Faster uses `https://`.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -152,38 +204,76 @@ struct ImportView: View {
     @ViewBuilder
     private var remoteURLField: some View {
         #if os(iOS)
-        TextField("https://example.com/article", text: $remoteURL)
-            .textFieldStyle(.roundedBorder)
-            .disabled(isProcessing)
-            .autocorrectionDisabled()
-            .textInputAutocapitalization(.never)
-            .keyboardType(.URL)
-            .submitLabel(.go)
-            .onSubmit {
-                Task {
-                    await importRemoteLink()
+        HStack(spacing: 10) {
+            Image(systemName: "link")
+                .foregroundStyle(.secondary)
+
+            TextField("example.com/article", text: $remoteURL)
+                .disabled(isProcessing)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+                .keyboardType(.URL)
+                .submitLabel(.go)
+                .onSubmit {
+                    Task {
+                        await importRemoteLink()
+                    }
                 }
-            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.black.opacity(0.18))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(Color.white.opacity(0.08))
+        )
         #else
-        TextField("https://example.com/article", text: $remoteURL)
-            .textFieldStyle(.roundedBorder)
-            .disabled(isProcessing)
-            .onSubmit {
-                Task {
-                    await importRemoteLink()
+        HStack(spacing: 10) {
+            Image(systemName: "link")
+                .foregroundStyle(.secondary)
+
+            TextField("example.com/article", text: $remoteURL)
+                .disabled(isProcessing)
+                .textFieldStyle(.plain)
+                .onSubmit {
+                    Task {
+                        await importRemoteLink()
+                    }
                 }
-            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.black.opacity(0.18))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(Color.white.opacity(0.08))
+        )
         #endif
     }
 
     private var progressSection: some View {
-        VStack(spacing: 12) {
+        HStack(spacing: 12) {
             ProgressView()
-                .controlSize(.large)
+                .controlSize(.regular)
+
             Text(processingMessage)
-                .font(.headline)
+                .font(.subheadline)
+                .fontWeight(.medium)
+
+            Spacer()
         }
-        .padding()
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(
+            RoundedRectangle(cornerRadius: 18)
+                .fill(.regularMaterial)
+        )
     }
 
     private var supportedTypes: [UTType] {
@@ -250,7 +340,7 @@ struct ImportView: View {
     }
 
     private func importRemoteLink() async {
-        let rawURL = remoteURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        let rawURL = normalizedRemoteURLInput
         guard !rawURL.isEmpty else { return }
 
         isProcessing = true
@@ -265,6 +355,10 @@ struct ImportView: View {
             importError = error.localizedDescription
             showingError = true
         }
+    }
+
+    private var normalizedRemoteURLInput: String {
+        remoteURL.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
 
