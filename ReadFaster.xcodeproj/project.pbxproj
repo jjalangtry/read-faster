@@ -3,63 +3,66 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 63;
+	objectVersion = 77;
 	objects = {
 
 /* Begin PBXBuildFile section */
 		0084311E2E8E0CB9A9CA4DBD /* BookCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D62807344E4E19BA4B449EA2 /* BookCard.swift */; };
 		0813359E0C15A93ECC7BB2B5 /* ReadingProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 304C81B6697655A5B455D9EA /* ReadingProgress.swift */; };
 		0A8051642B5E1E7921A0D81D /* StorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFBE9528847F85B3B70DA2A3 /* StorageService.swift */; };
+		0CB69C8C395C831F31BE939A /* NowPlayingControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7575DB72E0B129626CEFF51 /* NowPlayingControls.swift */; };
 		0E07BAD004759BC2994514B2 /* ReadFasterApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E35D39D85A2DCF35826FDF6 /* ReadFasterApp.swift */; };
-		0D4A1B2C3F8E9A0B1C2D3E4F /* NowPlayingControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F7A8B9C0D1E2F /* NowPlayingControls.swift */; };
 		0E167220483A3D72510022ED /* PDFParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C133DA5C71690512C4105A1 /* PDFParser.swift */; };
 		0E16EB54AB207521CD5FA9DE /* TextProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81AF3FE7372C88D0F91841B9 /* TextProcessor.swift */; };
-		11300B1896EC42372EE2BA70 /* AveriaSerifLibre-Italic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C65845ADA9C0C23805CBC452 /* AveriaSerifLibre-Italic.ttf */; };
 		11DC0CF820EC2678EB6AC689 /* ReadingProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 304C81B6697655A5B455D9EA /* ReadingProgress.swift */; };
 		1560D7E1F70EEB93E0D28F82 /* RSVPView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40C8E94596763B83C0749AF7 /* RSVPView.swift */; };
 		193221C360A362609135AEFA /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3143C7081F60ACE51AB214EA /* SettingsView.swift */; };
 		19694F20851655B7CB06DEFB /* ReaderSettingsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E577272EE6657FA0AB1EC05B /* ReaderSettingsSheet.swift */; };
+		1B96AB54370F2ABB2617988D /* AveriaSerifLibre-Italic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 6D3E36FA809899FD2DC876DE /* AveriaSerifLibre-Italic.ttf */; };
 		1BA9E0D52D8990F6C7A51818 /* DocumentParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92607DD353C1966E4122DE2B /* DocumentParser.swift */; };
 		1DBB637429D590E016D66602 /* Book.swift in Sources */ = {isa = PBXBuildFile; fileRef = 720A95ADF4F209173ECB1DD2 /* Book.swift */; };
 		209362C3EFF72F35188D163A /* EPUBParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = E75D07923EC8BA7D69707F10 /* EPUBParser.swift */; };
+		28B37ADC1CEF966CEFCEC29F /* AveriaSerifLibre-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 101A1225E0A559DECCBC31A9 /* AveriaSerifLibre-Bold.ttf */; };
+		292371A04C8786019BC0D898 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 344CF8473819B3BC25B1318C /* ShareViewController.swift */; };
 		2C78B03ACFDBE207B5A35BBF /* ImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8296314E7C44A4E3FD358166 /* ImportView.swift */; };
 		316E8D73CF803E35B074C708 /* SentenceContextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 987611D53FA631631B8E54E9 /* SentenceContextView.swift */; };
 		326D656ACA456C46452A8712 /* ReadingMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 753B7C49E89D018014C42C0A /* ReadingMode.swift */; };
+		327BCD69DBB1476E1520BA25 /* ReadFaster-ShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 579AA3996AB2B0E057B05192 /* ReadFaster-ShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		3440649A57459DFA2FF0544A /* ControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 461E011FFC991CFF6CFE5ADC /* ControlsView.swift */; };
 		37CE2F1736A366F11A707E77 /* ORPCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F267054CC84B3FF28F4B3CD3 /* ORPCalculator.swift */; };
 		39C9B5E19A3161CF42F4CDD3 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DA5169842C8F3AC468AE285 /* LibraryView.swift */; };
 		3C5C1FD9DF721DA578C10900 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 8413069FC3996F115D70A272 /* ZIPFoundation */; };
-		40E2815B9AF6027E09FF68B0 /* AveriaSerifLibre-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A246AD6DC2F1045742A891B6 /* AveriaSerifLibre-Regular.ttf */; };
 		4185C10AA2D1BC0CE876F7AB /* ReadingMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 753B7C49E89D018014C42C0A /* ReadingMode.swift */; };
-		49B214BB50F06769DB9F0D98 /* AveriaSerifLibre-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A246AD6DC2F1045742A891B6 /* AveriaSerifLibre-Regular.ttf */; };
 		4A5131812C5FA1EFAA23FAD3 /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = 4759AC1D5F68C3C41973BFF0 /* SwiftSoup */; };
 		5123B1191740676315670455 /* Chapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = E12F6EABBD79EC08E90D63AC /* Chapter.swift */; };
+		5536AB100FBD1DACEEADCED8 /* NowPlayingControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7575DB72E0B129626CEFF51 /* NowPlayingControls.swift */; };
 		58B1A50AC711B744E574A4FE /* HoldableButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81589A9AF68207A641289DD6 /* HoldableButton.swift */; };
 		5EAB24E4BD70744AD58F8B27 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3143C7081F60ACE51AB214EA /* SettingsView.swift */; };
+		65BA3416D660800EB9B19C22 /* AveriaSerifLibre-BoldItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = DA7796027618096A85FBA833 /* AveriaSerifLibre-BoldItalic.ttf */; };
 		6AC2767F7504267A40B2AA52 /* StorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFBE9528847F85B3B70DA2A3 /* StorageService.swift */; };
 		6C960E0AC47685E6D6BAB9F5 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 360BA255B15896C478414A12 /* Assets.xcassets */; };
 		6D88D4409E6E7EA71288FF3F /* ChaptersSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2BC97AC289F4141AEBFC63D /* ChaptersSheet.swift */; };
 		7ACA7019091F92F6DBD22744 /* TextProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81AF3FE7372C88D0F91841B9 /* TextProcessor.swift */; };
 		7B5D6D8BF633E5B572BFB670 /* GlassEffectContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A2D977C89F006BEA9060E4E /* GlassEffectContainer.swift */; };
-		7C13E1500F78CCE79D0380C9 /* AveriaSerifLibre-BoldItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 6920D527FD28C4E3955571F7 /* AveriaSerifLibre-BoldItalic.ttf */; };
 		845F5E3186B5B2DB481EEEDE /* TextParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 456EEC013D231DBADD65A9B8 /* TextParser.swift */; };
-		85F2A1B3C4D5E6F7A8B9C0D1 /* NowPlayingControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F7A8B9C0D1E2F /* NowPlayingControls.swift */; };
+		849B8B99EC874B0A10842F4E /* AveriaSerifLibre-BoldItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = DA7796027618096A85FBA833 /* AveriaSerifLibre-BoldItalic.ttf */; };
 		86958DFE3E20C3B2F2203859 /* OCRParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD7066860B04066AD4C4D9A2 /* OCRParser.swift */; };
 		86B8ACAD072B2895382C40FF /* BookmarksSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B71D576E9AA208C562C92681 /* BookmarksSheet.swift */; };
+		8B82CACC263A32708FBEC5C9 /* AveriaSerifLibre-Italic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 6D3E36FA809899FD2DC876DE /* AveriaSerifLibre-Italic.ttf */; };
 		8BFC2BCF4223021256D9BBA3 /* ChaptersSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2BC97AC289F4141AEBFC63D /* ChaptersSheet.swift */; };
 		8C3C4EA4A8C36D0E89DB8B8E /* ReaderSettingsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E577272EE6657FA0AB1EC05B /* ReaderSettingsSheet.swift */; };
 		8EB81FB55C9DEA7C87036F55 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C29702C5A598CAC90D17C43C /* ContentView.swift */; };
 		91B72806FB74930BBB4A8AE5 /* SentenceContextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 987611D53FA631631B8E54E9 /* SentenceContextView.swift */; };
 		962D80B38DD625A8DCA9216D /* ControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 461E011FFC991CFF6CFE5ADC /* ControlsView.swift */; };
-		98893B3AEE7AB4DE8CE89E04 /* AveriaSerifLibre-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 8B8F6C2305250961990EDA14 /* AveriaSerifLibre-Bold.ttf */; };
 		99380D4922E32DB12F41CBD2 /* RSVPEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E192411840FB34683086C67 /* RSVPEngine.swift */; };
 		9FF433942C4695CD3A2D8169 /* EPUBParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = E75D07923EC8BA7D69707F10 /* EPUBParser.swift */; };
 		A2240546A94280E55D877B53 /* RSVPEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E192411840FB34683086C67 /* RSVPEngine.swift */; };
+		A3945FB221DD81806006ACEE /* AveriaSerifLibre-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 1762AF7A092B0D4C622F2A29 /* AveriaSerifLibre-Regular.ttf */; };
 		A5925AE720E2935F12765E63 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C29702C5A598CAC90D17C43C /* ContentView.swift */; };
-		A7CBFFF23463AFE01D59A09E /* AveriaSerifLibre-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 8B8F6C2305250961990EDA14 /* AveriaSerifLibre-Bold.ttf */; };
 		AC885CF7F98D4BBB9DB8D530 /* WordDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E5426EB2F7B1FA8A2A38F25 /* WordDisplay.swift */; };
 		AE0227C040E9AFFE132AA4A7 /* WordDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E5426EB2F7B1FA8A2A38F25 /* WordDisplay.swift */; };
 		AEC7A1DE87654B3839E67D61 /* PDFParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C133DA5C71690512C4105A1 /* PDFParser.swift */; };
+		B2A0FD0D37324F034E651EC9 /* AveriaSerifLibre-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 1762AF7A092B0D4C622F2A29 /* AveriaSerifLibre-Regular.ttf */; };
 		B65A5B0313E23542B0F767CB /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 5F519F8138B5A1DF093AD00A /* ZIPFoundation */; };
 		BE22E7B9DBF09168BCFEDB85 /* DocumentParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92607DD353C1966E4122DE2B /* DocumentParser.swift */; };
 		C6B800255D9C600EFC6A57D3 /* AppFont.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5156DC1E6C8B320DA376026 /* AppFont.swift */; };
@@ -74,31 +77,57 @@
 		E6310C7928875B0F0971A4E6 /* HoldableButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81589A9AF68207A641289DD6 /* HoldableButton.swift */; };
 		EAB7D03F2BED1E64B877B8CF /* ImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8296314E7C44A4E3FD358166 /* ImportView.swift */; };
 		EAD98E7C8E9A3068A8EA2D95 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 360BA255B15896C478414A12 /* Assets.xcassets */; };
-		EB0AC1701C6C680C6F2F85D9 /* AveriaSerifLibre-Italic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C65845ADA9C0C23805CBC452 /* AveriaSerifLibre-Italic.ttf */; };
 		ED68D8C921FE9FE927DAEDB8 /* Bookmark.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D2B054DDD8276C5847450DF /* Bookmark.swift */; };
-		F0A989FB1946C0DF22E443A8 /* AveriaSerifLibre-BoldItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 6920D527FD28C4E3955571F7 /* AveriaSerifLibre-BoldItalic.ttf */; };
 		F4B0DD6606862978E8237446 /* OCRParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD7066860B04066AD4C4D9A2 /* OCRParser.swift */; };
 		F569F3E9A03E6F4FB0A0BDD1 /* BookmarksSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B71D576E9AA208C562C92681 /* BookmarksSheet.swift */; };
+		F62FABB4E0FCB2180FEA52BD /* AveriaSerifLibre-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 101A1225E0A559DECCBC31A9 /* AveriaSerifLibre-Bold.ttf */; };
 		F91F462484B546B34A522C2B /* AppFont.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5156DC1E6C8B320DA376026 /* AppFont.swift */; };
 		FB600A857EC407A114600299 /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = 15E441C3EB5DE11D02612665 /* SwiftSoup */; };
 		FDA73AE81950F1244211D851 /* ORPCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F267054CC84B3FF28F4B3CD3 /* ORPCalculator.swift */; };
 		FDD8BD172904950197B7AB3E /* GlassEffectContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A2D977C89F006BEA9060E4E /* GlassEffectContainer.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		BF4FFCE5BC2064785AF04880 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A7086EACA48CDFBBF8CE8F9D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = EEE05F328E2370ACD464BABD;
+			remoteInfo = "ReadFaster-ShareExtension";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		744115ED9A0B8AC159FDC208 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				327BCD69DBB1476E1520BA25 /* ReadFaster-ShareExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
-		144C10CD16BD53303441C64F /* Read Faster.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Read Faster.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		1A2B3C4D5E6F7A8B9C0D1E2F /* NowPlayingControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingControls.swift; sourceTree = "<group>"; };
+		101A1225E0A559DECCBC31A9 /* AveriaSerifLibre-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "AveriaSerifLibre-Bold.ttf"; sourceTree = "<group>"; };
+		144C10CD16BD53303441C64F /* ReadFaster-macOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "ReadFaster-macOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		1762AF7A092B0D4C622F2A29 /* AveriaSerifLibre-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "AveriaSerifLibre-Regular.ttf"; sourceTree = "<group>"; };
 		2E192411840FB34683086C67 /* RSVPEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSVPEngine.swift; sourceTree = "<group>"; };
 		304C81B6697655A5B455D9EA /* ReadingProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingProgress.swift; sourceTree = "<group>"; };
 		3143C7081F60ACE51AB214EA /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		344CF8473819B3BC25B1318C /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		360BA255B15896C478414A12 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		40C8E94596763B83C0749AF7 /* RSVPView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSVPView.swift; sourceTree = "<group>"; };
 		456EEC013D231DBADD65A9B8 /* TextParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextParser.swift; sourceTree = "<group>"; };
 		461E011FFC991CFF6CFE5ADC /* ControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlsView.swift; sourceTree = "<group>"; };
 		4D2B054DDD8276C5847450DF /* Bookmark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Bookmark.swift; sourceTree = "<group>"; };
 		4E35D39D85A2DCF35826FDF6 /* ReadFasterApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadFasterApp.swift; sourceTree = "<group>"; };
+		579AA3996AB2B0E057B05192 /* ReadFaster-ShareExtension.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = "ReadFaster-ShareExtension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
 		5C133DA5C71690512C4105A1 /* PDFParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFParser.swift; sourceTree = "<group>"; };
-		6920D527FD28C4E3955571F7 /* AveriaSerifLibre-BoldItalic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "AveriaSerifLibre-BoldItalic.ttf"; sourceTree = "<group>"; };
+		6D3E36FA809899FD2DC876DE /* AveriaSerifLibre-Italic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "AveriaSerifLibre-Italic.ttf"; sourceTree = "<group>"; };
 		6E5426EB2F7B1FA8A2A38F25 /* WordDisplay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordDisplay.swift; sourceTree = "<group>"; };
 		720A95ADF4F209173ECB1DD2 /* Book.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Book.swift; sourceTree = "<group>"; };
 		753B7C49E89D018014C42C0A /* ReadingMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingMode.swift; sourceTree = "<group>"; };
@@ -109,18 +138,19 @@
 		8296314E7C44A4E3FD358166 /* ImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportView.swift; sourceTree = "<group>"; };
 		87F51B5375F72A2B690A02F1 /* ReadFaster.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ReadFaster.entitlements; sourceTree = "<group>"; };
 		8A2D977C89F006BEA9060E4E /* GlassEffectContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassEffectContainer.swift; sourceTree = "<group>"; };
-		8B8F6C2305250961990EDA14 /* AveriaSerifLibre-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "AveriaSerifLibre-Bold.ttf"; sourceTree = "<group>"; };
 		92607DD353C1966E4122DE2B /* DocumentParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentParser.swift; sourceTree = "<group>"; };
 		987611D53FA631631B8E54E9 /* SentenceContextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SentenceContextView.swift; sourceTree = "<group>"; };
-		A246AD6DC2F1045742A891B6 /* AveriaSerifLibre-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "AveriaSerifLibre-Regular.ttf"; sourceTree = "<group>"; };
-		B07142487F187B38A89FB7F7 /* Read Faster.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Read Faster.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A7575DB72E0B129626CEFF51 /* NowPlayingControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingControls.swift; sourceTree = "<group>"; };
+		B07142487F187B38A89FB7F7 /* ReadFaster-iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "ReadFaster-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		B2BC97AC289F4141AEBFC63D /* ChaptersSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChaptersSheet.swift; sourceTree = "<group>"; };
 		B71D576E9AA208C562C92681 /* BookmarksSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarksSheet.swift; sourceTree = "<group>"; };
+		BB00A9FC59D79442756F1304 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		C29702C5A598CAC90D17C43C /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		C65845ADA9C0C23805CBC452 /* AveriaSerifLibre-Italic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "AveriaSerifLibre-Italic.ttf"; sourceTree = "<group>"; };
 		CD7066860B04066AD4C4D9A2 /* OCRParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OCRParser.swift; sourceTree = "<group>"; };
 		CFBE9528847F85B3B70DA2A3 /* StorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageService.swift; sourceTree = "<group>"; };
 		D62807344E4E19BA4B449EA2 /* BookCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookCard.swift; sourceTree = "<group>"; };
+		DA7796027618096A85FBA833 /* AveriaSerifLibre-BoldItalic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "AveriaSerifLibre-BoldItalic.ttf"; sourceTree = "<group>"; };
+		DB309446C1C3FEBEFFB16E9D /* ReadFasterShareExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ReadFasterShareExtension.entitlements; sourceTree = "<group>"; };
 		E12F6EABBD79EC08E90D63AC /* Chapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Chapter.swift; sourceTree = "<group>"; };
 		E5156DC1E6C8B320DA376026 /* AppFont.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFont.swift; sourceTree = "<group>"; };
 		E577272EE6657FA0AB1EC05B /* ReaderSettingsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderSettingsSheet.swift; sourceTree = "<group>"; };
@@ -166,6 +196,7 @@
 			isa = PBXGroup;
 			children = (
 				E5FE6314867D9569D6CC3C12 /* ReadFaster */,
+				7CF2581DBB78C2FA0F583EF3 /* ReadFasterShareExtension */,
 				A03A9F3D944F7BEA4BF4A745 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -227,13 +258,23 @@
 			path = Utilities;
 			sourceTree = "<group>";
 		};
+		7CF2581DBB78C2FA0F583EF3 /* ReadFasterShareExtension */ = {
+			isa = PBXGroup;
+			children = (
+				BB00A9FC59D79442756F1304 /* Info.plist */,
+				DB309446C1C3FEBEFFB16E9D /* ReadFasterShareExtension.entitlements */,
+				344CF8473819B3BC25B1318C /* ShareViewController.swift */,
+			);
+			path = ReadFasterShareExtension;
+			sourceTree = "<group>";
+		};
 		88703997A225BEA7AFEB5C50 /* Reader */ = {
 			isa = PBXGroup;
 			children = (
 				B71D576E9AA208C562C92681 /* BookmarksSheet.swift */,
 				B2BC97AC289F4141AEBFC63D /* ChaptersSheet.swift */,
 				461E011FFC991CFF6CFE5ADC /* ControlsView.swift */,
-				1A2B3C4D5E6F7A8B9C0D1E2F /* NowPlayingControls.swift */,
+				A7575DB72E0B129626CEFF51 /* NowPlayingControls.swift */,
 				E577272EE6657FA0AB1EC05B /* ReaderSettingsSheet.swift */,
 				40C8E94596763B83C0749AF7 /* RSVPView.swift */,
 				987611D53FA631631B8E54E9 /* SentenceContextView.swift */,
@@ -245,10 +286,10 @@
 		9368250C2E505C09B87E01A0 /* Fonts */ = {
 			isa = PBXGroup;
 			children = (
-				8B8F6C2305250961990EDA14 /* AveriaSerifLibre-Bold.ttf */,
-				C65845ADA9C0C23805CBC452 /* AveriaSerifLibre-Italic.ttf */,
-				A246AD6DC2F1045742A891B6 /* AveriaSerifLibre-Regular.ttf */,
-				6920D527FD28C4E3955571F7 /* AveriaSerifLibre-BoldItalic.ttf */,
+				101A1225E0A559DECCBC31A9 /* AveriaSerifLibre-Bold.ttf */,
+				DA7796027618096A85FBA833 /* AveriaSerifLibre-BoldItalic.ttf */,
+				6D3E36FA809899FD2DC876DE /* AveriaSerifLibre-Italic.ttf */,
+				1762AF7A092B0D4C622F2A29 /* AveriaSerifLibre-Regular.ttf */,
 			);
 			path = Fonts;
 			sourceTree = "<group>";
@@ -256,8 +297,9 @@
 		A03A9F3D944F7BEA4BF4A745 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				B07142487F187B38A89FB7F7 /* Read Faster.app */,
-				144C10CD16BD53303441C64F /* Read Faster.app */,
+				B07142487F187B38A89FB7F7 /* ReadFaster-iOS.app */,
+				144C10CD16BD53303441C64F /* ReadFaster-macOS.app */,
+				579AA3996AB2B0E057B05192 /* ReadFaster-ShareExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -337,7 +379,7 @@
 				15E441C3EB5DE11D02612665 /* SwiftSoup */,
 			);
 			productName = "ReadFaster-macOS";
-			productReference = 144C10CD16BD53303441C64F /* Read Faster.app */;
+			productReference = 144C10CD16BD53303441C64F /* ReadFaster-macOS.app */;
 			productType = "com.apple.product-type.application";
 		};
 		DC691BB97538251F2FFC56B6 /* ReadFaster-iOS */ = {
@@ -347,10 +389,12 @@
 				C80DDCE5635A0973A2F75568 /* Sources */,
 				CCB76D19F00313FCACAC0A0C /* Resources */,
 				B1A0F646818C394D7D026738 /* Frameworks */,
+				744115ED9A0B8AC159FDC208 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				74B6D3488332C0ACB9C5D94E /* PBXTargetDependency */,
 			);
 			name = "ReadFaster-iOS";
 			packageProductDependencies = (
@@ -358,8 +402,25 @@
 				4759AC1D5F68C3C41973BFF0 /* SwiftSoup */,
 			);
 			productName = "ReadFaster-iOS";
-			productReference = B07142487F187B38A89FB7F7 /* Read Faster.app */;
+			productReference = B07142487F187B38A89FB7F7 /* ReadFaster-iOS.app */;
 			productType = "com.apple.product-type.application";
+		};
+		EEE05F328E2370ACD464BABD /* ReadFaster-ShareExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 51706244FF844DAF2A0DF8AB /* Build configuration list for PBXNativeTarget "ReadFaster-ShareExtension" */;
+			buildPhases = (
+				6855D587E1152123A25CA408 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "ReadFaster-ShareExtension";
+			packageProductDependencies = (
+			);
+			productName = "ReadFaster-ShareExtension";
+			productReference = 579AA3996AB2B0E057B05192 /* ReadFaster-ShareExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -368,12 +429,15 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 2620;
+				LastUpgradeCheck = 2600;
 				TargetAttributes = {
 					B60CC89AC9AA5C8E9E886B4E = {
 						ProvisioningStyle = Automatic;
 					};
 					DC691BB97538251F2FFC56B6 = {
+						ProvisioningStyle = Automatic;
+					};
+					EEE05F328E2370ACD464BABD = {
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -392,9 +456,11 @@
 				A72D931A6768FFD5EFDD5758 /* XCRemoteSwiftPackageReference "SwiftSoup" */,
 				38F5FA900546326F1B79E4D5 /* XCRemoteSwiftPackageReference "ZIPFoundation" */,
 			);
+			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
+				EEE05F328E2370ACD464BABD /* ReadFaster-ShareExtension */,
 				DC691BB97538251F2FFC56B6 /* ReadFaster-iOS */,
 				B60CC89AC9AA5C8E9E886B4E /* ReadFaster-macOS */,
 			);
@@ -407,10 +473,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				6C960E0AC47685E6D6BAB9F5 /* Assets.xcassets in Resources */,
-				98893B3AEE7AB4DE8CE89E04 /* AveriaSerifLibre-Bold.ttf in Resources */,
-				EB0AC1701C6C680C6F2F85D9 /* AveriaSerifLibre-Italic.ttf in Resources */,
-				40E2815B9AF6027E09FF68B0 /* AveriaSerifLibre-Regular.ttf in Resources */,
-				F0A989FB1946C0DF22E443A8 /* AveriaSerifLibre-BoldItalic.ttf in Resources */,
+				28B37ADC1CEF966CEFCEC29F /* AveriaSerifLibre-Bold.ttf in Resources */,
+				65BA3416D660800EB9B19C22 /* AveriaSerifLibre-BoldItalic.ttf in Resources */,
+				8B82CACC263A32708FBEC5C9 /* AveriaSerifLibre-Italic.ttf in Resources */,
+				A3945FB221DD81806006ACEE /* AveriaSerifLibre-Regular.ttf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -419,10 +485,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				EAD98E7C8E9A3068A8EA2D95 /* Assets.xcassets in Resources */,
-				A7CBFFF23463AFE01D59A09E /* AveriaSerifLibre-Bold.ttf in Resources */,
-				11300B1896EC42372EE2BA70 /* AveriaSerifLibre-Italic.ttf in Resources */,
-				49B214BB50F06769DB9F0D98 /* AveriaSerifLibre-Regular.ttf in Resources */,
-				7C13E1500F78CCE79D0380C9 /* AveriaSerifLibre-BoldItalic.ttf in Resources */,
+				F62FABB4E0FCB2180FEA52BD /* AveriaSerifLibre-Bold.ttf in Resources */,
+				849B8B99EC874B0A10842F4E /* AveriaSerifLibre-BoldItalic.ttf in Resources */,
+				1B96AB54370F2ABB2617988D /* AveriaSerifLibre-Italic.ttf in Resources */,
+				B2A0FD0D37324F034E651EC9 /* AveriaSerifLibre-Regular.ttf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -442,13 +508,13 @@
 				8BFC2BCF4223021256D9BBA3 /* ChaptersSheet.swift in Sources */,
 				A5925AE720E2935F12765E63 /* ContentView.swift in Sources */,
 				3440649A57459DFA2FF0544A /* ControlsView.swift in Sources */,
-				0D4A1B2C3F8E9A0B1C2D3E4F /* NowPlayingControls.swift in Sources */,
 				BE22E7B9DBF09168BCFEDB85 /* DocumentParser.swift in Sources */,
 				209362C3EFF72F35188D163A /* EPUBParser.swift in Sources */,
 				7B5D6D8BF633E5B572BFB670 /* GlassEffectContainer.swift in Sources */,
 				E6310C7928875B0F0971A4E6 /* HoldableButton.swift in Sources */,
 				EAB7D03F2BED1E64B877B8CF /* ImportView.swift in Sources */,
 				DC44EA366062A391B822B68E /* LibraryView.swift in Sources */,
+				0CB69C8C395C831F31BE939A /* NowPlayingControls.swift in Sources */,
 				F4B0DD6606862978E8237446 /* OCRParser.swift in Sources */,
 				FDA73AE81950F1244211D851 /* ORPCalculator.swift in Sources */,
 				0E167220483A3D72510022ED /* PDFParser.swift in Sources */,
@@ -467,6 +533,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		6855D587E1152123A25CA408 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				292371A04C8786019BC0D898 /* ShareViewController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		C80DDCE5635A0973A2F75568 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -480,13 +554,13 @@
 				6D88D4409E6E7EA71288FF3F /* ChaptersSheet.swift in Sources */,
 				8EB81FB55C9DEA7C87036F55 /* ContentView.swift in Sources */,
 				962D80B38DD625A8DCA9216D /* ControlsView.swift in Sources */,
-				85F2A1B3C4D5E6F7A8B9C0D1 /* NowPlayingControls.swift in Sources */,
 				1BA9E0D52D8990F6C7A51818 /* DocumentParser.swift in Sources */,
 				9FF433942C4695CD3A2D8169 /* EPUBParser.swift in Sources */,
 				FDD8BD172904950197B7AB3E /* GlassEffectContainer.swift in Sources */,
 				58B1A50AC711B744E574A4FE /* HoldableButton.swift in Sources */,
 				2C78B03ACFDBE207B5A35BBF /* ImportView.swift in Sources */,
 				39C9B5E19A3161CF42F4CDD3 /* LibraryView.swift in Sources */,
+				5536AB100FBD1DACEEADCED8 /* NowPlayingControls.swift in Sources */,
 				86958DFE3E20C3B2F2203859 /* OCRParser.swift in Sources */,
 				37CE2F1736A366F11A707E77 /* ORPCalculator.swift in Sources */,
 				AEC7A1DE87654B3839E67D61 /* PDFParser.swift in Sources */,
@@ -507,12 +581,19 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		74B6D3488332C0ACB9C5D94E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = EEE05F328E2370ACD464BABD /* ReadFaster-ShareExtension */;
+			targetProxy = BF4FFCE5BC2064785AF04880 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
 		09CEA9257E13BE5D0F8113F8 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -544,11 +625,9 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
-				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -570,7 +649,6 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.9;
@@ -581,7 +659,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -613,11 +690,9 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
-				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -632,10 +707,28 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.9;
+			};
+			name = Release;
+		};
+		221F0A2C58B17E0458AAE164 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ReadFasterShareExtension/ReadFasterShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				INFOPLIST_FILE = ReadFasterShareExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.jakoblangtry.readfaster.share;
+				PRODUCT_NAME = "Read Faster Share Extension";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -643,15 +736,11 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = ReadFaster/Resources/ReadFaster.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 5JZV7V6Y4Z;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ReadFaster/Resources/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Read Faster";
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.books";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -659,11 +748,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.jakoblangtry.readfaster;
 				PRODUCT_NAME = "Read Faster";
 				SDKROOT = iphoneos;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
@@ -671,17 +758,12 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = ReadFaster/Resources/ReadFaster.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEAD_CODE_STRIPPING = YES;
-				DEVELOPMENT_TEAM = 5JZV7V6Y4Z;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ReadFaster/Resources/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Read Faster";
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.books";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -697,17 +779,12 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = ReadFaster/Resources/ReadFaster.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEAD_CODE_STRIPPING = YES;
-				DEVELOPMENT_TEAM = 5JZV7V6Y4Z;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ReadFaster/Resources/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Read Faster";
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.books";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -719,19 +796,34 @@
 			};
 			name = Debug;
 		};
+		97CE9807EFC171A112D806EA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ReadFasterShareExtension/ReadFasterShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				INFOPLIST_FILE = ReadFasterShareExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.jakoblangtry.readfaster.share;
+				PRODUCT_NAME = "Read Faster Share Extension";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
 		DB1C95EDD717D4DCAE862ED8 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = ReadFaster/Resources/ReadFaster.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 5JZV7V6Y4Z;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ReadFaster/Resources/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Read Faster";
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.books";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -739,11 +831,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.jakoblangtry.readfaster;
 				PRODUCT_NAME = "Read Faster";
 				SDKROOT = iphoneos;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -764,6 +854,15 @@
 			buildConfigurations = (
 				09CEA9257E13BE5D0F8113F8 /* Debug */,
 				15C8562133618BD334D647D0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		51706244FF844DAF2A0DF8AB /* Build configuration list for PBXNativeTarget "ReadFaster-ShareExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				97CE9807EFC171A112D806EA /* Debug */,
+				221F0A2C58B17E0458AAE164 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

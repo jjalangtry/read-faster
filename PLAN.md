@@ -284,6 +284,42 @@ class Bookmark {
 
 ---
 
+## Xcode Cloud / App Store Deployment
+
+### App Group prerequisite (Share Extension)
+
+Xcode Cloud export will fail if the App Group `group.com.jakoblangtry.readfaster` is not enabled in Apple Developer for both App IDs.
+
+**In Apple Developer (developer.apple.com):**
+
+1. **Main app** – App ID `com.jakoblangtry.readfaster`:
+   - Enable **App Groups**
+   - Add group: `group.com.jakoblangtry.readfaster`
+
+2. **Share extension** – App ID `com.jakoblangtry.readfaster.share`:
+   - Create this App ID if it does not exist (App type: App)
+   - Enable **App Groups**
+   - Add the same group: `group.com.jakoblangtry.readfaster`
+
+### After changing project.yml
+
+The Share Extension target is defined in `project.yml`. Regenerate the Xcode project before shipping:
+
+```bash
+xcodegen generate
+```
+
+Then commit the updated `.xcodeproj` (including `project.pbxproj`, workspace data, and schemes).
+
+### Pre-export checklist
+
+1. Enable App Groups for both App IDs in Apple Developer (see above)
+2. Run `xcodegen generate` and commit the regenerated project
+3. Open the project in Xcode and confirm both targets have correct signing and capabilities
+4. Push to `main` and re-run Xcode Cloud
+
+---
+
 ## Open Questions
 
 1. **Chunk mode?** - Some RSVP readers show 2-3 words at a time for very high speeds. Worth adding as an option?
